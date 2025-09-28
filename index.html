@@ -16,7 +16,10 @@
         .fade-out { animation: fadeOut 0.5s ease-in-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         @keyframes fadeOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.95); } }
-        .nav-active { color: #f59e0b; } /* Cor âmbar para o ícone ativo */
+        .nav-active {
+            color: #1f2937; /* gray-800 */
+            background-color: #f59e0b; /* amber-500 */
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white overflow-hidden h-screen">
@@ -44,9 +47,8 @@
                 <div><h1 class="text-2xl font-bold" id="header-title"></h1></div>
                 <button onclick="voltarParaPerfis()" class="bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors"><i class="fas fa-exchange-alt mr-2"></i>Trocar Perfil</button>
             </header>
-            <main class="flex-1 overflow-y-auto p-4 sm:p-6">
-                <div id="mesas-view" class="hidden"><div id="mesas-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-4"></div></div>
-                <div id="cozinha-view" class="hidden"><div id="pedidos-cozinha-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div></div>
+            <main class="flex-1 overflow-y-auto" id="main-container">
+                <!-- Conteúdo dinâmico das views aqui -->
             </main>
         </div>
         
@@ -61,9 +63,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, collection, setDoc, writeBatch, serverTimestamp, updateDoc, query, where, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, onSnapshot, collection, setDoc, writeBatch, serverTimestamp, updateDoc, query, where, getDoc, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // SUA CONFIGURAÇÃO DO FIREBASE
         const firebaseConfig = {
             apiKey: "AIzaSyA3rqB_5P8UKl8jTFBTD6L4_jnIPgvTkJA",
             authDomain: "fagula-grill.firebaseapp.com",
@@ -74,24 +75,7 @@
             measurementId: "G-LGJBCZGC4C"
         };
         
-        // CARDÁPIO ATUALIZADO
-        const cardapio = {
-            "Espetos Clássicos": [
-                { id: 'esp-frango', nome: 'Frango', preco: 10.00 }, { id: 'esp-coracao', nome: 'Coração', preco: 10.00 }, { id: 'esp-linguica', nome: 'Linguiça', preco: 10.00 }, { id: 'esp-paoalho', nome: 'Pão de Alho', preco: 10.00 }, { id: 'esp-santamassa', nome: 'Santa Massa', preco: 10.00 }, { id: 'esp-queijo', nome: 'Queijo Coalho', preco: 12.00 }, { id: 'esp-torresmo-espeto', nome: 'Torresmo', preco: 12.00 }, { id: 'esp-kafta', nome: 'Kafta', preco: 12.00 }, { id: 'esp-alcatra', nome: 'Alcatra', preco: 14.00 }
-            ],
-            "Espetos Premium": [
-                { id: 'prem-costela', nome: 'Costela', preco: 18.00 }, { id: 'prem-picanha', nome: 'Picanha', preco: 18.00, description: 'Maturatta Friboi' }, { id: 'prem-medalhao-alcatra', nome: 'Medalhão de Alcatra', preco: 18.00 }, { id: 'prem-medalhao-palmito', nome: 'Medalhão de Palmito', preco: 18.00 }, { id: 'prem-kafta-queijo', nome: 'Kafta com Queijo', preco: 16.00 }, { id: 'prem-medalhao-frango', nome: 'Medalhão de Frango', preco: 16.00 }, { id: 'prem-romeujulieta', nome: 'Medalhão Romeu e Julieta', preco: 16.00 }, { id: 'prem-almondega', nome: 'Medalhão de Almôndega', preco: 16.00 }, { id: 'prem-vegetariano', nome: 'Vegetariano', preco: 16.00 }, { id: 'prem-mandioca', nome: 'Medalhão de Mandioca', preco: 16.00, description: 'Com carne seca e queijo' }
-            ],
-            "Entradas": [
-                { id: 'ent-torresmo', nome: 'Torresmo (Individual)', preco: 24.00, description: 'Barrinha de panceta' }, { id: 'ent-bolinho-costela', nome: 'Bolinho de Costela (3und)', preco: 24.00 }, { id: 'ent-pao-kafta', nome: 'Pão de Alho com Kafta e Queijo', preco: 24.00 }, { id: 'ent-porpetone', nome: 'Porpetone', preco: 26.00, description: 'Bolo de carne artesanal recheado com queijo assado na churrasqueira' }, { id: 'ent-salaminho', nome: 'Salaminho (100g)', preco: 18.00 }, { id: 'ent-frios', nome: 'Pratinho de Frios', preco: 39.00, description: 'Salame, mussarela, ovo de codorna e azeitonas' }, { id: 'ent-paolica', nome: 'Pãoliça (Porção Individual)', preco: 19.00, description: 'Massa de linguiça temperada, queijo mussarela e molho verde no pão francês grelhado' }
-            ],
-            "Acompanhamentos": [
-                { id: 'acomp-trio', nome: 'Trio', preco: 10.00, description: 'Vinagrete, farofa e molho verde' }
-            ],
-            "Bebidas & Cia": [
-                { id: 'refri-lata', nome: 'Refrigerante Lata', preco: 5.00 }, { id: 'agua-com-gas', nome: 'Água c/ Gás', preco: 4.00 }, { id: 'agua-sem-gas', nome: 'Água s/ Gás', preco: 3.00 }, { id: 'h2oh', nome: 'H2OH!', preco: 6.00 }, { id: 'suco-lata', nome: 'Suco Lata', preco: 6.00 }, { id: 'energetico', nome: 'Energético', preco: 12.00 }, { id: 'heineken-ln', nome: 'Heineken LN', preco: 10.00 }, { id: 'bud-ln', nome: 'Budweiser LN', preco: 9.00 }, { id: 'stella-ln', nome: 'Stella Artois LN', preco: 9.00 }, { id: 'heineken-600', nome: 'Heineken 600ml', preco: 18.00 }, { id: 'original-600', nome: 'Original 600ml', preco: 15.00 }, { id: 'bud-600', nome: 'Budweiser 600ml', preco: 15.00 }, { id: 'suco-jarra', nome: 'Suco Jarra 1L', preco: 15.00 }, { id: 'dose-campari', nome: 'Dose Campari', preco: 10.00 }, { id: 'dose-gin', nome: 'Dose Gin', preco: 15.00 }, { id: 'dose-redlabel', nome: 'Dose Red Label', preco: 15.00 }, { id: 'dose-oldparr', nome: 'Dose Old Parr', preco: 18.00 }, { id: 'drink-gintonica', nome: 'Gin Tônica', preco: 25.00 }, { id: 'drink-caipirinha', nome: 'Caipirinha', preco: 18.00 }
-            ]
-        };
+        const cardapio = { "Espetos Clássicos": [ { id: 'esp-frango', nome: 'Frango', preco: 10.00 }, { id: 'esp-coracao', nome: 'Coração', preco: 10.00 }, { id: 'esp-linguica', nome: 'Linguiça', preco: 10.00 }, { id: 'esp-paoalho', nome: 'Pão de Alho', preco: 10.00 }, { id: 'esp-santamassa', nome: 'Santa Massa', preco: 10.00 }, { id: 'esp-queijo', nome: 'Queijo Coalho', preco: 12.00 }, { id: 'esp-torresmo-espeto', nome: 'Torresmo', preco: 12.00 }, { id: 'esp-kafta', nome: 'Kafta', preco: 12.00 }, { id: 'esp-alcatra', nome: 'Alcatra', preco: 14.00 } ], "Espetos Premium": [ { id: 'prem-costela', nome: 'Costela', preco: 18.00 }, { id: 'prem-picanha', nome: 'Picanha', preco: 18.00, description: 'Maturatta Friboi' }, { id: 'prem-medalhao-alcatra', nome: 'Medalhão de Alcatra', preco: 18.00 }, { id: 'prem-medalhao-palmito', nome: 'Medalhão de Palmito', preco: 18.00 }, { id: 'prem-kafta-queijo', nome: 'Kafta com Queijo', preco: 16.00 }, { id: 'prem-medalhao-frango', nome: 'Medalhão de Frango', preco: 16.00 }, { id: 'prem-romeujulieta', nome: 'Medalhão Romeu e Julieta', preco: 16.00 }, { id: 'prem-almondega', nome: 'Medalhão de Almôndega', preco: 16.00 }, { id: 'prem-vegetariano', nome: 'Vegetariano', preco: 16.00 }, { id: 'prem-mandioca', nome: 'Medalhão de Mandioca', preco: 16.00, description: 'Com carne seca e queijo' } ], "Entradas": [ { id: 'ent-torresmo', nome: 'Torresmo (Individual)', preco: 24.00, description: 'Barrinha de panceta' }, { id: 'ent-bolinho-costela', nome: 'Bolinho de Costela (3und)', preco: 24.00 }, { id: 'ent-pao-kafta', nome: 'Pão de Alho com Kafta e Queijo', preco: 24.00 }, { id: 'ent-porpetone', nome: 'Porpetone', preco: 26.00, description: 'Bolo de carne artesanal recheado com queijo assado na churrasqueira' }, { id: 'ent-salaminho', nome: 'Salaminho (100g)', preco: 18.00 }, { id: 'ent-frios', nome: 'Pratinho de Frios', preco: 39.00, description: 'Salame, mussarela, ovo de codorna e azeitonas' }, { id: 'ent-paolica', nome: 'Pãoliça (Porção Individual)', preco: 19.00, description: 'Massa de linguiça temperada, queijo mussarela e molho verde no pão francês grelhado' } ], "Acompanhamentos": [ { id: 'acomp-trio', nome: 'Trio', preco: 10.00, description: 'Vinagrete, farofa e molho verde' } ], "Bebidas & Cia": [ { id: 'refri-lata', nome: 'Refrigerante Lata', preco: 5.00 }, { id: 'agua-com-gas', nome: 'Água c/ Gás', preco: 4.00 }, { id: 'agua-sem-gas', nome: 'Água s/ Gás', preco: 3.00 }, { id: 'h2oh', nome: 'H2OH!', preco: 6.00 }, { id: 'suco-lata', nome: 'Suco Lata', preco: 6.00 }, { id: 'energetico', nome: 'Energético', preco: 12.00 }, { id: 'heineken-ln', nome: 'Heineken LN', preco: 10.00 }, { id: 'bud-ln', nome: 'Budweiser LN', preco: 9.00 }, { id: 'stella-ln', nome: 'Stella Artois LN', preco: 9.00 }, { id: 'heineken-600', nome: 'Heineken 600ml', preco: 18.00 }, { id: 'original-600', nome: 'Original 600ml', preco: 15.00 }, { id: 'bud-600', nome: 'Budweiser 600ml', preco: 15.00 }, { id: 'suco-jarra', nome: 'Suco Jarra 1L', preco: 15.00 }, { id: 'dose-campari', nome: 'Dose Campari', preco: 10.00 }, { id: 'dose-gin', nome: 'Dose Gin', preco: 15.00 }, { id: 'dose-redlabel', nome: 'Dose Red Label', preco: 15.00 }, { id: 'dose-oldparr', nome: 'Dose Old Parr', preco: 18.00 }, { id: 'drink-gintonica', nome: 'Gin Tônica', preco: 25.00 }, { id: 'drink-caipirinha', nome: 'Caipirinha', preco: 18.00 } ] };
 
         let app, auth, db, perfilAtual, mesaSelecionada, comandaTemporaria = [], listeners = [], synth;
 
@@ -133,11 +117,13 @@
             document.getElementById('main-view').classList.remove('hidden');
             const titles = { caixa: 'Painel do Caixa', atendente: 'Mapa de Mesas', cozinha: 'Painel da Cozinha' };
             document.getElementById('header-title').textContent = titles[p];
-            ['mesas-view', 'cozinha-view'].forEach(v => document.getElementById(v).classList.add('hidden'));
+            const mainContainer = document.getElementById('main-container');
             if (p === 'caixa' || p === 'atendente') {
-                document.getElementById('mesas-view').classList.remove('hidden'); setupMesasView();
+                mainContainer.innerHTML = `<div id="mesas-view" class="p-4 sm:p-6"><div id="mesas-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-4"></div></div>`;
+                setupMesasView();
             } else {
-                document.getElementById('cozinha-view').classList.remove('hidden'); setupCozinhaView();
+                mainContainer.innerHTML = `<div id="cozinha-view" class="h-full flex flex-col"></div>`;
+                setupCozinhaView();
             }
         };
 
@@ -146,11 +132,15 @@
             document.getElementById('perfil-view').classList.remove('hidden');
             document.getElementById('main-view').classList.add('hidden');
             listeners.forEach(unsub => unsub()); listeners = [];
+            const timerInterval = window.cozinhaTimerInterval;
+            if (timerInterval) clearInterval(timerInterval);
             fecharPdvView(); fecharDetalheCaixaView();
         };
 
         const setupMesasView = () => {
-            const grid = document.getElementById('mesas-grid'); grid.innerHTML = '';
+            const grid = document.getElementById('mesas-grid'); 
+            if(!grid) return;
+            grid.innerHTML = '';
             for (let i = 1; i <= 50; i++) {
                 const mesaEl = document.createElement('div'); mesaEl.id = `mesa-${i}`;
                 mesaEl.className = 'p-2 rounded-lg text-center cursor-pointer transition-all duration-300';
@@ -385,7 +375,7 @@
                 if (comandaTemporaria[itemIndex].quantidade <= 0) comandaTemporaria.splice(itemIndex, 1);
             }
             renderComanda();
-            renderPdvScreen('conta'); // Atualiza a tela da conta para refletir a mudança
+            renderPdvScreen('conta'); 
         };
 
         const enviarPedido = async () => {
@@ -416,32 +406,106 @@
         };
 
         const setupCozinhaView = () => {
-            const q = query(collection(db, "pedidos_cozinha"), where("status", "==", "pendente"));
+            const container = document.getElementById('cozinha-view');
+            if(!container) return;
+            container.innerHTML = `
+                <div class="p-4 border-b border-gray-700 flex-shrink-0">
+                    <div class="flex items-center gap-4" id="cozinha-tabs">
+                        <button onclick="renderCozinhaScreen('pendente')" class="py-2 px-4 rounded-full font-semibold">A Fazer</button>
+                        <button onclick="renderCozinhaScreen('historico')" class="py-2 px-4 rounded-full font-semibold">Histórico</button>
+                    </div>
+                </div>
+                <div id="cozinha-screen-container" class="flex-1 p-4 overflow-y-auto"></div>
+            `;
+            renderCozinhaScreen('pendente');
+        };
+
+        const renderCozinhaScreen = async (status) => {
+            listeners.forEach(unsub => unsub()); listeners = [];
+            if (window.cozinhaTimerInterval) clearInterval(window.cozinhaTimerInterval);
+
+            document.querySelectorAll('#cozinha-tabs button').forEach(btn => {
+                btn.classList.remove('nav-active');
+                btn.classList.add('bg-gray-700');
+            });
+            const activeButton = document.querySelector(`#cozinha-tabs button[onclick="renderCozinhaScreen('${status}')"]`);
+            if(activeButton) {
+                activeButton.classList.add('nav-active');
+                activeButton.classList.remove('bg-gray-700');
+            }
+            
+            const container = document.getElementById('cozinha-screen-container');
+            if (status === 'historico') {
+                container.innerHTML = `<div id="historico-list" class="w-full space-y-2">Carregando histórico...</div>`;
+                loadHistorico();
+                return;
+            }
+            
+            container.innerHTML = `<div id="col-pendente" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4"></div>`;
+            const q = query(collection(db, "pedidos_cozinha"), where("status", "==", "pendente"), orderBy("criadoEm", "asc"));
             const unsub = onSnapshot(q, (snapshot) => {
-                const grid = document.getElementById('pedidos-cozinha-grid');
-                if(!grid) return;
-                snapshot.docChanges().forEach((change) => {
-                    if (change.type === "added") {
-                         if (synth) synth.triggerAttackRelease("C5", "0.5");
-                         const doc = change.doc;
-                         const pedido = doc.data();
-                         const pedidoCard = document.createElement('div');
-                         pedidoCard.id = `pedido-${doc.id}`;
-                         pedidoCard.className = 'bg-gray-800 p-4 rounded-lg shadow-lg flex flex-col gap-3 fade-in';
-                         let itensHtml = pedido.itens.map(item => `<li class="flex justify-between text-lg"><span class="font-bold">${item.quantidade}x</span><span>${item.nome}</span>${item.observacao ? `<span class="text-xs text-amber-400 italic block w-full">Obs: ${item.observacao}</span>` : ''}</li>`).join('');
-                         pedidoCard.innerHTML = `<div class="flex justify-between items-center pb-2 border-b border-gray-700"><h3 class="text-2xl font-extrabold text-amber-400">Mesa ${pedido.mesa}</h3><span class="text-xs text-gray-400">${pedido.criadoEm ? new Date(pedido.criadoEm.toDate()).toLocaleTimeString() : ''}</span></div><ul class="space-y-1 flex-grow">${itensHtml}</ul><button onclick="marcarPedidoPronto('${doc.id}')" class="w-full mt-2 bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition-colors">Marcar como Pronto</button>`;
-                         grid.insertBefore(pedidoCard, grid.firstChild);
-                    }
-                    if (change.type === "removed") {
-                        const card = document.getElementById(`pedido-${change.doc.id}`);
-                        if(card) card.remove();
-                    }
+                const grid = document.getElementById('col-pendente');
+                if (!grid) return;
+                
+                snapshot.docChanges().forEach(change => {
+                    if (change.type === "added" && synth) synth.triggerAttackRelease("C5", "0.5");
                 });
-                if(snapshot.empty && grid) grid.innerHTML = `<p class="text-gray-400 col-span-full text-center mt-10">Nenhum pedido pendente.</p>`;
+                
+                grid.innerHTML = snapshot.empty ? `<p class="text-gray-400 col-span-full text-center mt-10">Nenhum pedido pendente.</p>` : '';
+                snapshot.forEach(doc => renderPedidoCard(doc.id, doc.data()));
             });
             listeners.push(unsub);
         };
-        const marcarPedidoPronto = async id => await updateDoc(doc(db, "pedidos_cozinha", id), { status: 'pronto' });
+        
+        const renderPedidoCard = (id, pedido) => {
+            const grid = document.getElementById('col-pendente');
+            if (!grid) return;
+            
+            let card = document.getElementById(`pedido-${id}`);
+            if (!card) {
+                card = document.createElement('div');
+                card.id = `pedido-${id}`;
+                grid.appendChild(card);
+            }
+            card.className = 'bg-gray-800 p-4 rounded-lg shadow-lg flex flex-col gap-3 fade-in';
+            const itensHtml = pedido.itens.map(item => `<li class="flex justify-between items-center text-lg"><span class="font-bold text-gray-400">${item.quantidade}x</span><span class="flex-1 text-right">${item.nome}</span></li>${item.observacao ? `<li class="w-full text-right text-xs text-amber-400 italic">- ${item.observacao}</li>` : ''}`).join('');
+            card.innerHTML = `
+                <div class="flex justify-between items-center pb-2 border-b border-gray-700">
+                    <h3 class="text-2xl font-extrabold text-amber-400">Mesa ${pedido.mesa}</h3>
+                    <span class="text-xs">${pedido.criadoEm ? new Date(pedido.criadoEm.toDate()).toLocaleTimeString() : ''}</span>
+                </div>
+                ${pedido.cliente ? `<p class="text-sm">Cliente: <span class="font-semibold">${pedido.cliente}</span></p>` : ''}
+                <ul class="space-y-1 flex-grow">${itensHtml}</ul>
+                <button onclick="marcarPedidoPronto('${id}')" class="w-full mt-2 bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition-colors">Marcar como Pronto</button>
+            `;
+        };
+
+        const marcarPedidoPronto = async id => {
+            await updateDoc(doc(db, "pedidos_cozinha", id), { status: 'pronto' });
+            const card = document.getElementById(`pedido-${id}`);
+            if (card) {
+                card.classList.add('fade-out');
+                setTimeout(() => card.remove(), 500);
+            }
+            showNotification(`Pedido finalizado!`);
+        };
+        
+        const loadHistorico = async () => {
+             const container = document.getElementById('historico-list');
+             const q = query(collection(db, "pedidos_cozinha"), where("status", "==", "pronto"), orderBy("criadoEm", "desc"), limit(50));
+             const querySnapshot = await getDocs(q);
+             if (container) {
+                container.innerHTML = querySnapshot.empty ? '<p class="text-gray-500 text-center">Nenhum pedido finalizado ainda.</p>' : '';
+                querySnapshot.forEach(doc => {
+                    const pedido = doc.data();
+                    const card = document.createElement('div');
+                    card.className = 'bg-gray-800 p-3 rounded-lg text-sm';
+                    const itens = pedido.itens.map(i => `${i.quantidade}x ${i.nome}`).join(', ');
+                    card.innerHTML = `<p class="font-bold">Mesa ${pedido.mesa} <span class="font-normal text-gray-400">- ${new Date(pedido.criadoEm.toDate()).toLocaleString()}</span></p><p class="text-gray-300">${itens}</p>`;
+                    container.appendChild(card);
+                });
+             }
+        };
         
         const abrirDetalheCaixaView = () => {
             const modal = document.getElementById('caixa-detalhe-view');
@@ -487,7 +551,7 @@
         };
         const formatCurrency = v => v ? v.toLocaleString('pt-BR', { style: 'currency', 'currency': 'BRL' }) : 'R$ 0,00';
         
-        window.selecionarPerfil = selecionarPerfil; window.voltarParaPerfis = voltarParaPerfis; window.fecharPdvView = fecharPdvView; window.changeQty = changeQty; window.enviarPedido = enviarPedido; window.marcarPedidoPronto = marcarPedidoPronto; window.fecharDetalheCaixaView = fecharDetalheCaixaView; window.fecharConta = fecharConta; window.renderPdvScreen = renderPdvScreen; window.abrirDetalhesItem = abrirDetalhesItem; window.fecharDetalhesItem = fecharDetalhesItem;
+        window.selecionarPerfil = selecionarPerfil; window.voltarParaPerfis = voltarParaPerfis; window.fecharPdvView = fecharPdvView; window.changeQty = changeQty; window.enviarPedido = enviarPedido; window.marcarPedidoPronto = marcarPedidoPronto; window.fecharDetalheCaixaView = fecharDetalheCaixaView; window.fecharConta = fecharConta; window.renderPdvScreen = renderPdvScreen; window.abrirDetalhesItem = abrirDetalhesItem; window.fecharDetalhesItem = fecharDetalhesItem; window.renderCozinhaScreen = renderCozinhaScreen;
         
         initFirebase();
     </script>
