@@ -179,33 +179,43 @@
             mesaSelecionada = { numero, ...mesaDoc.data() };
             comandaTemporaria = mesaSelecionada.itens ? JSON.parse(JSON.stringify(mesaSelecionada.itens)) : [];
             document.getElementById('pdv-view').classList.remove('hidden');
-            renderPdvScreen('editar'); 
+            renderPdvScreen('adicionar'); 
         };
 
         const fecharPdvView = () => {
-            document.getElementById('pdv-view').classList.add('hidden');
-            document.getElementById('pdv-view').innerHTML = ''; 
+            const el = document.getElementById('pdv-view');
+            const modal = el.querySelector('.fade-in');
+            if(modal) {
+                modal.classList.add('fade-out');
+                setTimeout(() => {
+                    el.innerHTML = '';
+                    el.classList.add('hidden');
+                }, 400);
+            } else {
+                el.innerHTML = '';
+                el.classList.add('hidden');
+            }
         };
         
         const renderPdvScreen = (screen) => {
             const container = document.getElementById('pdv-view');
             const totalItens = comandaTemporaria.reduce((acc, item) => acc + item.quantidade, 0);
 
-            let screenHtml = `
+            const screenHtml = `
             <div class="bg-gray-800 w-full h-full flex flex-col fade-in">
                 <header class="p-4 border-b border-gray-700 flex justify-between items-center flex-shrink-0 bg-gray-800">
                     <h2 class="text-2xl font-bold">Mesa ${mesaSelecionada.numero}</h2>
-                    <div class="relative cursor-pointer" onclick="renderPdvScreen('conta')">
-                        <i class="fas fa-shopping-cart text-2xl"></i>
-                        ${totalItens > 0 ? `<span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">${totalItens}</span>` : ''}
-                    </div>
                 </header>
                 <main class="flex-1 overflow-y-auto bg-gray-900">
                     <!-- Conteúdo dinâmico da tela -->
                 </main>
                 <footer class="flex-shrink-0 bg-gray-800 border-t border-gray-700 grid grid-cols-3 text-center text-gray-400">
-                    <button onclick="renderPdvScreen('conta')" class="p-4 ${screen === 'conta' ? 'nav-active' : ''}"><i class="fas fa-receipt text-2xl"></i><span class="text-xs block mt-1">Ver Conta</span></button>
-                    <button onclick="renderPdvScreen('editar')" class="p-4 ${screen === 'editar' ? 'nav-active' : ''}"><i class="fas fa-pen-to-square text-2xl"></i><span class="text-xs block mt-1">Editar Pedido</span></button>
+                    <button onclick="renderPdvScreen('conta')" class="p-4 relative ${screen === 'conta' ? 'nav-active' : ''}">
+                        <i class="fas fa-receipt text-2xl"></i>
+                        <span class="text-xs block mt-1">Ver Conta</span>
+                        ${totalItens > 0 ? `<span class="absolute top-2 right-6 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">${totalItens}</span>` : ''}
+                    </button>
+                    <button onclick="renderPdvScreen('adicionar')" class="p-4 ${screen === 'adicionar' ? 'nav-active' : ''}"><i class="fas fa-plus text-2xl"></i><span class="text-xs block mt-1">Adicionar Itens</span></button>
                     <button onclick="fecharPdvView()" class="p-4"><i class="fas fa-table-cells text-2xl"></i><span class="text-xs block mt-1">Mesas</span></button>
                 </footer>
             </div>
@@ -213,7 +223,7 @@
             container.innerHTML = screenHtml;
 
             const mainContainer = container.querySelector('main');
-            if (screen === 'editar') {
+            if (screen === 'adicionar') {
                 mainContainer.innerHTML = `
                     <div class="p-3 border-b border-gray-700 flex-shrink-0 bg-gray-800 sticky top-0 z-10"><div id="categorias-container" class="flex items-center gap-2 overflow-x-auto no-scrollbar"></div></div>
                     <div id="produtos-container" class="p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
@@ -269,12 +279,16 @@
             const itemExistente = comandaTemporaria.find(i => i.id === item.id);
             if (itemExistente) itemExistente.quantidade++;
             else comandaTemporaria.push({ ...item, quantidade: 1 });
+            
             const totalItens = comandaTemporaria.reduce((acc, item) => acc + item.quantidade, 0);
-            const cartBadge = document.querySelector('#pdv-view header .relative span');
-            if (cartBadge) {
-                cartBadge.textContent = totalItens;
-            } else if (totalItens > 0) {
-                 document.querySelector('#pdv-view header .relative').innerHTML += `<span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">${totalItens}</span>`;
+            const badge = document.querySelector('footer button[onclick="renderPdvScreen(\'conta\')"] span:first-child');
+            if(badge) {
+                const spanBadge = badge.parentElement.querySelector('.absolute');
+                if (spanBadge) {
+                    spanBadge.textContent = totalItens;
+                } else if (totalItens > 0) {
+                    badge.parentElement.innerHTML += `<span class="absolute top-2 right-6 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">${totalItens}</span>`;
+                }
             }
             showNotification(`${item.nome} adicionado!`);
         };
@@ -294,7 +308,7 @@
             if(!container || !totalEl) return;
             let total = 0;
             if(comandaTemporaria.length === 0) {
-                container.innerHTML = '<p class="text-center text-gray-500 mt-10">Adicione itens do cardápio</p>';
+                container.innerHTML = '<p class="text-center text-gray-500 mt-10">Nenhum item adicionado.</p>';
                 totalEl.textContent = formatCurrency(0); return;
             }
             container.innerHTML = '';
@@ -305,9 +319,9 @@
                 itemDiv.innerHTML = `
                     <div><p class="font-medium">${item.nome}</p><p class="text-xs text-gray-400">${formatCurrency(item.preco)}</p></div>
                     <div class="flex items-center gap-3">
-                        <button class="bg-gray-600 w-6 h-6 rounded-full font-bold" onclick="changeQty('${item.id}', -1)">-</button>
+                        <button class="bg-gray-600 w-6 h-6 rounded-full font-bold flex items-center justify-center" onclick="changeQty('${item.id}', -1)">-</button>
                         <span class="font-bold w-4 text-center">${item.quantidade}</span>
-                        <button class="bg-gray-600 w-6 h-6 rounded-full font-bold" onclick="changeQty('${item.id}', 1)">+</button>
+                        <button class="bg-gray-600 w-6 h-6 rounded-full font-bold flex items-center justify-center" onclick="changeQty('${item.id}', 1)">+</button>
                     </div>`;
                 container.appendChild(itemDiv);
             });
@@ -404,7 +418,7 @@
                 el.classList.remove('fade-in'); el.classList.add('hidden');
             }, 2000);
         };
-        const formatCurrency = v => v.toLocaleString('pt-BR', { style: 'currency', 'currency': 'BRL' });
+        const formatCurrency = v => v ? v.toLocaleString('pt-BR', { style: 'currency', 'currency': 'BRL' }) : 'R$ 0,00';
         
         window.selecionarPerfil = selecionarPerfil; window.voltarParaPerfis = voltarParaPerfis; window.fecharPdvView = fecharPdvView; window.changeQty = changeQty; window.enviarPedido = enviarPedido; window.marcarPedidoPronto = marcarPedidoPronto; window.fecharDetalheCaixaView = fecharDetalheCaixaView; window.fecharConta = fecharConta; window.renderPdvScreen = renderPdvScreen;
         
