@@ -3,16 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fagula Grill - PDV Offline</title>
+    <title>Fagula Grill - PDV</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Biblioteca de Som -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        .fade-out { animation: fadeOut 0.5s ease-in-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes fadeOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.95); } }
     </style>
 </head>
 <body class="bg-gray-900 text-white overflow-hidden h-screen">
@@ -30,7 +34,7 @@
                     <button onclick="selecionarPerfil('atendente')" class="w-full text-lg bg-green-600 text-white font-bold py-4 px-4 rounded-xl hover:bg-green-700 transition-all duration-300 shadow-lg flex items-center justify-center gap-3"><i class="fas fa-user-tie"></i>Atendente</button>
                     <button onclick="selecionarPerfil('cozinha')" class="w-full text-lg bg-orange-600 text-white font-bold py-4 px-4 rounded-xl hover:bg-orange-700 transition-all duration-300 shadow-lg flex items-center justify-center gap-3"><i class="fas fa-fire-burner"></i>Cozinha</button>
                 </div>
-                 <p class="text-green-500 text-sm mt-6">Sistema pronto para uso.</p>
+                <p id="connecting-status" class="text-gray-500 text-sm mt-6">Conectando ao sistema...</p>
             </div>
         </div>
 
@@ -46,23 +50,63 @@
             </main>
         </div>
         
-        <!-- MODAIS (PDV, CAIXA) -->
-        <div id="pdv-view" class="hidden fixed inset-0 bg-gray-900/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50 fade-in"></div>
-        <div id="caixa-detalhe-view" class="hidden fixed inset-0 bg-gray-900/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 fade-in"></div>
+        <!-- MODAL PDV -->
+        <div id="pdv-view" class="hidden fixed inset-0 bg-gray-900/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50">
+             <div class="bg-gray-800 w-full max-w-7xl h-[95vh] rounded-2xl shadow-2xl flex flex-col fade-in">
+                <header class="p-4 border-b border-gray-700 flex justify-between items-center flex-shrink-0">
+                    <h2 class="text-2xl font-bold">PDV - <span id="pdv-mesa-numero"></span></h2>
+                    <button onclick="fecharPdvView()" class="text-gray-400 hover:text-white"><i class="fas fa-times text-2xl"></i></button>
+                </header>
+                <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+                    <div class="lg:w-2/3 flex flex-col overflow-hidden">
+                        <div class="p-3 border-b border-gray-700 flex-shrink-0"><div id="categorias-container" class="flex items-center gap-2 overflow-x-auto no-scrollbar"></div></div>
+                        <div id="produtos-container" class="flex-1 p-3 overflow-y-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
+                    </div>
+                    <div class="lg:w-1/3 p-4 flex flex-col bg-gray-900/50 border-t lg:border-t-0 lg:border-l border-gray-700">
+                        <h3 class="text-xl font-semibold mb-4 flex-shrink-0">Comanda da Mesa</h3>
+                        <div id="comanda-itens" class="flex-1 space-y-2 overflow-y-auto no-scrollbar pr-2 mb-4"></div>
+                        <div class="border-t border-gray-700 pt-4 flex-shrink-0">
+                            <div class="flex justify-between items-center text-2xl font-bold mb-4"><span>Total</span><span id="comanda-total">R$ 0,00</span></div>
+                            <button onclick="enviarPedido()" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition-colors shadow-lg flex items-center justify-center gap-2"><i class="fas fa-paper-plane"></i> Enviar para Cozinha</button>
+                        </div>
+                    </div>
+                </div>
+             </div>
+        </div>
+
+        <!-- MODAL DETALHE CAIXA -->
+        <div id="caixa-detalhe-view" class="hidden fixed inset-0 bg-gray-900/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+             <div class="bg-gray-800 w-full max-w-md h-auto max-h-[80vh] rounded-2xl shadow-2xl flex flex-col fade-in">
+                 <header class="p-4 border-b border-gray-700 flex justify-between items-center"><h2 class="text-2xl font-bold">Detalhes - <span id="caixa-mesa-numero"></span></h2><button onclick="fecharDetalheCaixaView()" class="text-gray-400 hover:text-white"><i class="fas fa-times text-2xl"></i></button></header>
+                <div class="p-6 overflow-y-auto no-scrollbar">
+                    <ul id="caixa-itens-lista" class="space-y-2 mb-6"></ul>
+                    <div class="border-t border-gray-700 pt-4">
+                        <div class="flex justify-between items-center text-3xl font-extrabold mb-6"><span>Total</span><span id="caixa-total-mesa">R$ 0,00</span></div>
+                        <button onclick="fecharConta()" class="w-full bg-blue-600 text-white font-bold py-4 px-4 rounded-lg hover:bg-blue-700 transition-colors shadow-lg text-lg flex items-center justify-center gap-2"><i class="fas fa-receipt"></i> Fechar Conta</button>
+                    </div>
+                </div>
+             </div>
+        </div>
         
         <!-- NOTIFICAÇÃO -->
         <div id="notification" class="hidden fixed bottom-5 right-5 bg-green-500 text-white py-3 px-5 rounded-lg shadow-xl"><p></p></div>
+
     </div>
 
-    <script>
-        // ===================================================================
-        // ARQUITETURA DO SISTEMA
-        // ===================================================================
-        // - Sem Firebase: Toda a lógica de dados é controlada via Local Storage.
-        // - O sistema é 100% autônomo e funciona offline.
-        // - Cada dispositivo tem sua própria base de dados local.
-        // ===================================================================
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, collection, setDoc, writeBatch, serverTimestamp, updateDoc, query, where, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        const firebaseConfig = {
+            apiKey: "AIzaSyDI-L3zN0n_WjYd9_B6v2r8o_q_i-F-rQ",
+            authDomain: "fagula-grill.firebaseapp.com",
+            projectId: "fagula-grill",
+            storageBucket: "fagula-grill.appspot.com",
+            messagingSenderId: "537793587141",
+            appId: "1:537793587141:web:bc57fd34575ee2eb53bec"
+        };
+        
         // CARDÁPIO COMPLETO
         const cardapio = {
             "Espetos": [{ id: 'esp-carne', nome: 'Carne', preco: 7.00 }, { id: 'esp-coracao', nome: 'Coração', preco: 6.00 }, { id: 'esp-misto', nome: 'Misto', preco: 7.00 }, { id: 'esp-frango', nome: 'Frango', preco: 6.00 }, { id: 'esp-frangobacon', nome: 'Frango c/ Bacon', preco: 8.00 }, { id: 'esp-calabresa', nome: 'Calabresa', preco: 6.00 }, { id: 'esp-queijo', nome: 'Queijo Coalho', preco: 6.00 }, { id: 'esp-tulipa', nome: 'Tulipa', preco: 8.00 }],
@@ -77,28 +121,46 @@
             "Drinks": [{ id: 'drink-gintonica', nome: 'Gin Tônica', preco: 25.00 }, { id: 'drink-caipirinha', nome: 'Caipirinha', preco: 18.00 }]
         };
 
-        let perfilAtual, mesaSelecionada;
+        let app, auth, db, perfilAtual, mesaSelecionada;
         let comandaTemporaria = [];
+        let listeners = [];
+        let synth; 
 
-        // LÓGICA DE DADOS (LOCAL STORAGE)
-        const db = {
-            get: (key) => JSON.parse(localStorage.getItem(key) || '{}'),
-            set: (key, value) => localStorage.setItem(key, JSON.stringify(value)),
+        // INICIALIZAÇÃO E LÓGICA PRINCIPAL
+        const initFirebase = () => {
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                onAuthStateChanged(auth, user => {
+                    const statusEl = document.getElementById('connecting-status');
+                    if (user) {
+                        statusEl.textContent = "Conectado!"; statusEl.classList.remove('text-gray-500'); statusEl.classList.add('text-green-500');
+                    } else {
+                        signInAnonymously(auth).catch(err => {
+                             statusEl.textContent = "Erro de conexão.";
+                             statusEl.classList.remove('text-gray-500'); statusEl.classList.add('text-red-500');
+                        });
+                    }
+                });
+                document.body.addEventListener('click', () => {
+                    if (!synth) synth = new Tone.Synth().toDestination();
+                }, { once: true });
+
+            } catch (e) { document.getElementById('connecting-status').textContent = 'Erro de Configuração.'; }
         };
-
-        const selecionarPerfil = (perfil) => {
-            perfilAtual = perfil;
+        
+        const selecionarPerfil = p => {
+            perfilAtual = p;
             document.getElementById('perfil-view').classList.add('hidden');
             document.getElementById('main-view').classList.remove('hidden');
             const titles = { caixa: 'Painel do Caixa', atendente: 'Mapa de Mesas', cozinha: 'Painel da Cozinha' };
-            document.getElementById('header-title').textContent = titles[perfil];
+            document.getElementById('header-title').textContent = titles[p];
             ['mesas-view', 'cozinha-view'].forEach(v => document.getElementById(v).classList.add('hidden'));
-            if (perfil === 'caixa' || perfil === 'atendente') {
-                document.getElementById('mesas-view').classList.remove('hidden');
-                setupMesasView();
+            if (p === 'caixa' || p === 'atendente') {
+                document.getElementById('mesas-view').classList.remove('hidden'); setupMesasView();
             } else {
-                document.getElementById('cozinha-view').classList.remove('hidden');
-                setupCozinhaView();
+                document.getElementById('cozinha-view').classList.remove('hidden'); setupCozinhaView();
             }
         };
 
@@ -106,157 +168,248 @@
             perfilAtual = null;
             document.getElementById('perfil-view').classList.remove('hidden');
             document.getElementById('main-view').classList.add('hidden');
-            fecharPdvView();
-            fecharDetalheCaixaView();
+            listeners.forEach(unsub => unsub()); listeners = [];
+            fecharPdvView(); fecharDetalheCaixaView();
         };
 
-        // LÓGICA DAS MESAS
         const setupMesasView = () => {
-            const grid = document.getElementById('mesas-grid');
-            grid.innerHTML = '';
-            const mesas = db.get('mesas');
+            const grid = document.getElementById('mesas-grid'); grid.innerHTML = '';
             for (let i = 1; i <= 50; i++) {
-                const mesaData = mesas[i] || { status: 'livre', total: 0 };
-                const mesaEl = document.createElement('div');
+                const mesaEl = document.createElement('div'); mesaEl.id = `mesa-${i}`;
                 mesaEl.className = 'p-2 rounded-lg text-center cursor-pointer transition-all duration-300';
                 mesaEl.innerHTML = `<div class="font-extrabold text-3xl">${i}</div><div class="text-xs font-semibold"></div>`;
                 grid.appendChild(mesaEl);
-                updateMesaCard(i, mesaData);
             }
+            const unsub = onSnapshot(collection(db, "mesas"), snapshot => {
+                let mesasAtivas = new Set();
+                snapshot.forEach(doc => { updateMesaCard(doc.id, doc.data()); mesasAtivas.add(doc.id); });
+                for (let i = 1; i <= 50; i++) if (!mesasAtivas.has(String(i))) updateMesaCard(i, { status: 'livre' });
+            });
+            listeners.push(unsub);
         };
 
         const updateMesaCard = (numero, data) => {
-            const mesaEl = document.querySelector(`#mesas-grid > div:nth-child(${numero})`);
-            if (!mesaEl) return;
-            const status = data.status || 'livre';
-            const total = data.total || 0;
+            const mesaEl = document.getElementById(`mesa-${numero}`); if (!mesaEl) return;
+            const status = data.status || 'livre'; const total = data.total || 0;
             mesaEl.classList.remove('bg-green-600', 'bg-red-600', 'hover:bg-green-500', 'hover:bg-red-500');
             if (status === 'livre') {
-                mesaEl.classList.add('bg-green-600', 'hover:bg-green-500');
-                mesaEl.children[1].textContent = 'Livre';
+                mesaEl.classList.add('bg-green-600', 'hover:bg-green-500'); mesaEl.children[1].textContent = 'Livre';
             } else {
-                mesaEl.classList.add('bg-red-600', 'hover:bg-red-500');
-                mesaEl.children[1].textContent = formatCurrency(total);
+                mesaEl.classList.add('bg-red-600', 'hover:bg-red-500'); mesaEl.children[1].textContent = formatCurrency(total);
             }
             mesaEl.onclick = () => handleMesaClick(numero, data);
         };
 
-        const handleMesaClick = (numero, data) => {
-            mesaSelecionada = { numero, ...data };
+        const handleMesaClick = async (numero, data) => {
             if (perfilAtual === 'atendente') {
-                abrirPdvView(numero, data);
+                abrirPdvView(numero);
             } else if (perfilAtual === 'caixa' && data.status === 'ocupada') {
-                abrirDetalheCaixaView(data);
+                mesaSelecionada = { numero, ...data };
+                abrirDetalheCaixaView();
             }
         };
 
-        // LÓGICA DO PDV
-        const abrirPdvView = (numero, data) => {
-            mesaSelecionada = { numero, ...data };
-            comandaTemporaria = data.itens ? JSON.parse(JSON.stringify(data.itens)) : [];
-            const pdvView = document.getElementById('pdv-view');
-            pdvView.innerHTML = `
-                <div class="bg-gray-800 w-full max-w-7xl h-[95vh] rounded-2xl shadow-2xl flex flex-col">
-                    <header class="p-4 border-b border-gray-700 flex justify-between items-center flex-shrink-0">
-                        <h2 class="text-2xl font-bold">PDV - Mesa ${numero}</h2>
-                        <button onclick="fecharPdvView()" class="text-gray-400 hover:text-white"><i class="fas fa-times text-2xl"></i></button>
-                    </header>
-                    <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
-                        <div class="lg:w-2/3 flex flex-col overflow-hidden">
-                            <div class="p-3 border-b border-gray-700 flex-shrink-0"><div id="categorias-container" class="flex items-center gap-2 overflow-x-auto no-scrollbar"></div></div>
-                            <div id="produtos-container" class="flex-1 p-3 overflow-y-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
-                        </div>
-                        <div class="lg:w-1/3 p-4 flex flex-col bg-gray-900/50 border-t lg:border-t-0 lg:border-l border-gray-700">
-                            <h3 class="text-xl font-semibold mb-4 flex-shrink-0">Comanda da Mesa</h3>
-                            <div id="comanda-itens" class="flex-1 space-y-2 overflow-y-auto no-scrollbar pr-2 mb-4"></div>
-                            <div class="border-t border-gray-700 pt-4 flex-shrink-0">
-                                <div class="flex justify-between items-center text-2xl font-bold mb-4"><span>Total</span><span id="comanda-total">R$ 0,00</span></div>
-                                <button onclick="enviarPedido()" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition-colors shadow-lg flex items-center justify-center gap-2"><i class="fas fa-paper-plane"></i> Salvar & Enviar para Cozinha</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>`;
-            renderCategorias();
-            renderProdutos(Object.keys(cardapio)[0]);
-            renderComanda();
-            pdvView.classList.remove('hidden');
+        const abrirPdvView = async (numero) => {
+            const mesaDoc = await getDoc(doc(db, "mesas", String(numero)));
+            mesaSelecionada = { numero, ...mesaDoc.data() };
+            comandaTemporaria = mesaSelecionada.itens ? JSON.parse(JSON.stringify(mesaSelecionada.itens)) : [];
+            document.getElementById('pdv-view').classList.remove('hidden');
+            renderCategorias(); renderProdutos(Object.keys(cardapio)[0]); renderComanda();
         };
-        const fecharPdvView = () => document.getElementById('pdv-view').classList.add('hidden');
+        const fecharPdvView = () => {
+            const el = document.getElementById('pdv-view');
+            el.querySelector('.fade-in').classList.add('fade-out');
+            setTimeout(() => {
+                el.classList.add('hidden');
+                el.querySelector('.fade-in').classList.remove('fade-out');
+            }, 400);
+        };
         
-        const renderCategorias = () => { /* ... Lógica idêntica à anterior ... */ };
-        const renderProdutos = (categoria) => { /* ... Lógica idêntica à anterior ... */ };
-        const adicionarItem = (item) => { /* ... Lógica idêntica à anterior ... */ };
-        const changeQty = (itemId, amount) => { /* ... Lógica idêntica à anterior ... */ };
-        const renderComanda = () => { /* ... Lógica idêntica à anterior ... */ };
-        
-        const enviarPedido = () => {
-            if (comandaTemporaria.length === 0) {
-                showNotification('Comanda vazia. Adicione itens para salvar.', 'error');
-                return;
-            }
-            // 1. Salvar os dados da mesa
-            const mesas = db.get('mesas');
-            const novoTotal = comandaTemporaria.reduce((acc, item) => acc + (item.preco * item.quantidade), 0);
-            mesas[mesaSelecionada.numero] = {
-                status: 'ocupada',
-                total: novoTotal,
-                itens: comandaTemporaria,
-                lastUpdate: new Date().toISOString()
-            };
-            db.set('mesas', mesas);
-
-            // 2. Salvar o pedido para a cozinha
-            const pedidosCozinha = db.get('pedidos_cozinha') || [];
-            pedidosCozinha.push({
-                id: `pedido-${Date.now()}`,
-                mesa: mesaSelecionada.numero,
-                itens: comandaTemporaria,
-                status: 'pendente',
-                criadoEm: new Date().toISOString()
+        const renderCategorias = () => {
+            const container = document.getElementById('categorias-container');
+            if (!container) return;
+            container.innerHTML = '';
+            Object.keys(cardapio).forEach((categoria, index) => {
+                const button = document.createElement('button');
+                button.textContent = categoria;
+                button.className = `py-2 px-4 rounded-full font-semibold transition-colors text-sm whitespace-nowrap ${index === 0 ? 'bg-amber-500 text-white' : 'bg-gray-700 hover:bg-gray-600'}`;
+                button.onclick = () => {
+                    renderProdutos(categoria);
+                    container.querySelectorAll('button').forEach(btn => btn.classList.replace('bg-amber-500', 'bg-gray-700'));
+                    button.classList.replace('bg-gray-700', 'bg-amber-500');
+                };
+                container.appendChild(button);
             });
-            db.set('pedidos_cozinha', pedidosCozinha);
-
-            showNotification(`Pedido da Mesa ${mesaSelecionada.numero} salvo e enviado!`);
-            fecharPdvView();
-            setupMesasView(); // Atualiza a visualização das mesas
         };
         
-        // LÓGICA DA COZINHA
-        const setupCozinhaView = () => { /* ... Implementar com Local Storage ... */ };
-        const marcarPedidoPronto = (pedidoId) => { /* ... Implementar com Local Storage ... */ };
+        const renderProdutos = (categoria) => {
+            const container = document.getElementById('produtos-container');
+            if (!container) return;
+            container.innerHTML = '';
+            cardapio[categoria].forEach(item => {
+                const card = document.createElement('div');
+                card.className = "bg-gray-700 p-3 rounded-lg shadow hover:bg-gray-600 text-left transition-all duration-200 transform hover:scale-105 cursor-pointer flex flex-col justify-between";
+                card.innerHTML = `<div><p class="font-semibold text-white">${item.nome}</p></div><p class="text-lg text-amber-400 font-bold mt-2">${formatCurrency(item.preco)}</p>`;
+                card.onclick = () => adicionarItem(item);
+                container.appendChild(card);
+            });
+        };
         
-        // LÓGICA DO CAIXA
-        const abrirDetalheCaixaView = (data) => { /* ... Implementar com Local Storage ... */ };
-        const fecharDetalheCaixaView = () => document.getElementById('caixa-detalhe-view').classList.add('hidden');
-        const fecharConta = () => { /* ... Implementar com Local Storage ... */ };
+        const adicionarItem = (item) => {
+            const itemExistente = comandaTemporaria.find(i => i.id === item.id);
+            if (itemExistente) itemExistente.quantidade++;
+            else comandaTemporaria.push({ ...item, quantidade: 1 });
+            renderComanda();
+        };
+        
+        const changeQty = (itemId, amount) => {
+            const itemIndex = comandaTemporaria.findIndex(i => i.id === itemId);
+            if (itemIndex > -1) {
+                comandaTemporaria[itemIndex].quantidade += amount;
+                if (comandaTemporaria[itemIndex].quantidade <= 0) comandaTemporaria.splice(itemIndex, 1);
+            }
+            renderComanda();
+        };
 
-        // Funções utilitárias
+        const renderComanda = () => {
+            const container = document.getElementById('comanda-itens');
+            const totalEl = document.getElementById('comanda-total');
+            if(!container || !totalEl) return;
+            let total = 0;
+            if(comandaTemporaria.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-500 mt-10">Adicione itens do cardápio</p>';
+                totalEl.textContent = formatCurrency(0); return;
+            }
+            container.innerHTML = '';
+            comandaTemporaria.forEach(item => {
+                total += item.preco * item.quantidade;
+                const itemDiv = document.createElement('div');
+                itemDiv.className = "flex justify-between items-center bg-gray-700/50 p-2 rounded";
+                itemDiv.innerHTML = `
+                    <div><p class="font-medium">${item.nome}</p><p class="text-xs text-gray-400">${formatCurrency(item.preco)}</p></div>
+                    <div class="flex items-center gap-3">
+                        <button class="bg-gray-600 w-6 h-6 rounded-full font-bold" onclick="changeQty('${item.id}', -1)">-</button>
+                        <span class="font-bold w-4 text-center">${item.quantidade}</span>
+                        <button class="bg-gray-600 w-6 h-6 rounded-full font-bold" onclick="changeQty('${item.id}', 1)">+</button>
+                    </div>`;
+                container.appendChild(itemDiv);
+            });
+            totalEl.textContent = formatCurrency(total);
+        };
+
+        const enviarPedido = async () => {
+            const itensOriginais = mesaSelecionada.itens || [];
+            const itensEnviados = comandaTemporaria.filter(item => {
+                const itemOriginal = itensOriginais.find(i => i.id === item.id);
+                return !itemOriginal || item.quantidade > itemOriginal.quantidade;
+            }).map(item => {
+                const itemOriginal = itensOriginais.find(i => i.id === item.id);
+                return { ...item, quantidade: itemOriginal ? item.quantidade - itemOriginal.quantidade : item.quantidade };
+            });
+
+            if (itensEnviados.length === 0) { showNotification('Nenhum item novo para enviar.', 'error'); return; }
+
+            const batch = writeBatch(db);
+            const pedidoCozinhaRef = doc(collection(db, "pedidos_cozinha"));
+            batch.set(pedidoCozinhaRef, { mesa: mesaSelecionada.numero, itens: itensEnviados, status: 'pendente', criadoEm: serverTimestamp() });
+            
+            const mesaRef = doc(db, "mesas", String(mesaSelecionada.numero));
+            const novoTotal = comandaTemporaria.reduce((acc, item) => acc + (item.preco * item.quantidade), 0);
+            batch.set(mesaRef, { status: 'ocupada', total: novoTotal, itens: comandaTemporaria, abertaEm: mesaSelecionada.abertaEm || serverTimestamp() }, { merge: true });
+            
+            await batch.commit();
+            showNotification(`Pedido da Mesa ${mesaSelecionada.numero} enviado!`);
+            fecharPdvView();
+        };
+
+        const setupCozinhaView = () => {
+            const q = query(collection(db, "pedidos_cozinha"), where("status", "==", "pendente"));
+            const unsub = onSnapshot(q, (snapshot) => {
+                const grid = document.getElementById('pedidos-cozinha-grid');
+                grid.innerHTML = snapshot.empty ? `<p class="text-gray-400 col-span-full text-center mt-10">Nenhum pedido pendente.</p>` : '';
+                
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === "added") {
+                         if (synth) synth.triggerAttackRelease("C5", "0.5");
+                    }
+                });
+
+                const docs = snapshot.docs.sort((a,b) => a.data().criadoEm?.toMillis() - b.data().criadoEm?.toMillis());
+                docs.forEach(doc => {
+                    const pedido = doc.data();
+                    let pedidoCard = document.getElementById(`pedido-${doc.id}`);
+                    if(!pedidoCard) {
+                        pedidoCard = document.createElement('div');
+                        pedidoCard.id = `pedido-${doc.id}`;
+                        pedidoCard.className = 'bg-gray-800 p-4 rounded-lg shadow-lg flex flex-col gap-3 fade-in';
+                        grid.insertBefore(pedidoCard, grid.firstChild);
+                    }
+                    
+                    let itensHtml = pedido.itens.map(item => `<li class="flex justify-between text-lg"><span class="font-bold">${item.quantidade}x</span><span>${item.nome}</span></li>`).join('');
+                    pedidoCard.innerHTML = `
+                        <div class="flex justify-between items-center pb-2 border-b border-gray-700"><h3 class="text-2xl font-extrabold text-amber-400">Mesa ${pedido.mesa}</h3><span class="text-xs text-gray-400">${pedido.criadoEm ? new Date(pedido.criadoEm.toDate()).toLocaleTimeString() : ''}</span></div>
+                        <ul class="space-y-1 flex-grow">${itensHtml}</ul>
+                        <button onclick="marcarPedidoPronto('${doc.id}')" class="w-full mt-2 bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition-colors">Marcar como Pronto</button>`;
+                });
+                 snapshot.docChanges().forEach((change) => {
+                    if (change.type === "removed") {
+                        const card = document.getElementById(`pedido-${change.doc.id}`);
+                        if(card) card.remove();
+                    }
+                });
+
+            });
+            listeners.push(unsub);
+        };
+        const marcarPedidoPronto = async id => await updateDoc(doc(db, "pedidos_cozinha", id), { status: 'pronto' });
+
+        const abrirDetalheCaixaView = () => {
+            const modalContent = document.getElementById('caixa-detalhe-view');
+            const listaItens = modalContent.querySelector('#caixa-itens-lista');
+            if (listaItens) {
+                listaItens.innerHTML = '';
+                 if (mesaSelecionada.itens?.length > 0) {
+                     mesaSelecionada.itens.forEach(item => {
+                        const li = document.createElement('li'); li.className = "flex justify-between items-center text-lg";
+                        li.innerHTML = `<span>${item.quantidade}x ${item.nome}</span><span class="font-semibold">${formatCurrency(item.preco * item.quantidade)}</span>`;
+                        listaItens.appendChild(li);
+                    });
+                } else { listaItens.innerHTML = `<p class="text-gray-400">Nenhum item lançado.</p>`; }
+                modalContent.querySelector('#caixa-total-mesa').textContent = formatCurrency(mesaSelecionada.total || 0);
+                modalContent.querySelector('#caixa-mesa-numero').textContent = `Mesa ${mesaSelecionada.numero}`;
+            }
+            modalContent.classList.remove('hidden');
+        };
+        const fecharDetalheCaixaView = () => document.getElementById('caixa-detalhe-view').classList.add('hidden');
+        const fecharConta = async () => {
+            if (!mesaSelecionada) return;
+            await setDoc(doc(db, "mesas", String(mesaSelecionada.numero)), { status: 'livre', total: 0, itens: [] });
+            showNotification(`Mesa ${mesaSelecionada.numero} fechada com sucesso!`);
+            fecharDetalheCaixaView();
+        };
+
         const showNotification = (message, type = 'success') => {
             const el = document.getElementById('notification');
             el.querySelector('p').textContent = message;
             el.classList.remove('hidden', 'bg-green-500', 'bg-red-500');
-            el.classList.add(type === 'success' ? 'bg-green-500' : 'bg-red-500');
-            el.classList.add('fade-in');
+            el.classList.add(type === 'success' ? 'bg-green-500' : 'bg-red-500', 'fade-in');
             setTimeout(() => {
-                el.classList.remove('fade-in');
-                el.classList.add('hidden');
+                el.classList.remove('fade-in'); el.classList.add('hidden');
             }, 3000);
         };
-        const formatCurrency = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        const formatCurrency = v => v.toLocaleString('pt-BR', { style: 'currency', 'currency': 'BRL' });
         
-        // Atribuição global das funções chamadas pelo HTML
+        // ATRIBUIÇÃO GLOBAL DAS FUNÇÕES
         window.selecionarPerfil = selecionarPerfil;
         window.voltarParaPerfis = voltarParaPerfis;
-        window.abrirPdvView = abrirPdvView;
         window.fecharPdvView = fecharPdvView;
-        window.renderCategorias = renderCategorias;
-        window.renderProdutos = renderProdutos;
-        window.adicionarItem = adicionarItem;
         window.changeQty = changeQty;
         window.enviarPedido = enviarPedido;
+        window.marcarPedidoPronto = marcarPedidoPronto;
         window.fecharDetalheCaixaView = fecharDetalheCaixaView;
         window.fecharConta = fecharConta;
         
+        initFirebase();
     </script>
 </body>
 </html>
