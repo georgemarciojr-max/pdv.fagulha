@@ -28,13 +28,13 @@
             <div class="w-full max-w-sm bg-gray-900 p-8 rounded-2xl shadow-2xl text-center">
                 <i class="fas fa-utensils text-5xl text-amber-400 mb-4"></i>
                 <h1 class="text-4xl font-extrabold text-white mb-2">Fagula Grill</h1>
-                <p class="text-gray-400 mb-8">Selecione seu perfil para iniciar</p>
+                <p class="text-gray-400 mb-8">Selecione o seu perfil para iniciar</p>
                 <div class="space-y-4">
-                    <button onclick="selecionarPerfil('caixa')" class="w-full text-lg bg-blue-600 text-white font-bold py-4 px-4 rounded-xl hover:bg-blue-700 transition-all duration-300 shadow-lg flex items-center justify-center gap-3"><i class="fas fa-cash-register"></i>Caixa</button>
-                    <button onclick="selecionarPerfil('atendente')" class="w-full text-lg bg-green-600 text-white font-bold py-4 px-4 rounded-xl hover:bg-green-700 transition-all duration-300 shadow-lg flex items-center justify-center gap-3"><i class="fas fa-user-tie"></i>Atendente</button>
-                    <button onclick="selecionarPerfil('cozinha')" class="w-full text-lg bg-orange-600 text-white font-bold py-4 px-4 rounded-xl hover:bg-orange-700 transition-all duration-300 shadow-lg flex items-center justify-center gap-3"><i class="fas fa-fire-burner"></i>Cozinha</button>
+                    <button onclick="selecionarPerfil('caixa')" class="w-full text-lg bg-blue-600 text-white font-bold py-4 px-4 rounded-xl hover:bg-blue-700 transition-all duration-300 shadow-lg flex items-center justify-center gap-3 disabled:opacity-50" disabled><i class="fas fa-cash-register"></i>Caixa</button>
+                    <button onclick="selecionarPerfil('atendente')" class="w-full text-lg bg-green-600 text-white font-bold py-4 px-4 rounded-xl hover:bg-green-700 transition-all duration-300 shadow-lg flex items-center justify-center gap-3 disabled:opacity-50" disabled><i class="fas fa-user-tie"></i>Atendente</button>
+                    <button onclick="selecionarPerfil('cozinha')" class="w-full text-lg bg-orange-600 text-white font-bold py-4 px-4 rounded-xl hover:bg-orange-700 transition-all duration-300 shadow-lg flex items-center justify-center gap-3 disabled:opacity-50" disabled><i class="fas fa-fire-burner"></i>Cozinha</button>
                 </div>
-                <p id="connecting-status" class="text-gray-500 text-sm mt-6">Conectando ao sistema...</p>
+                <p id="connecting-status" class="text-gray-500 text-sm mt-6">A ligar ao sistema...</p>
             </div>
         </div>
 
@@ -50,45 +50,9 @@
             </main>
         </div>
         
-        <!-- MODAL PDV -->
-        <div id="pdv-view" class="hidden fixed inset-0 bg-gray-900/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50">
-             <div class="bg-gray-800 w-full max-w-7xl h-[95vh] rounded-2xl shadow-2xl flex flex-col fade-in">
-                <header class="p-4 border-b border-gray-700 flex justify-between items-center flex-shrink-0">
-                    <h2 class="text-2xl font-bold">PDV - <span id="pdv-mesa-numero"></span></h2>
-                    <button onclick="fecharPdvView()" class="text-gray-400 hover:text-white"><i class="fas fa-times text-2xl"></i></button>
-                </header>
-                <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
-                    <div class="lg:w-2/3 flex flex-col overflow-hidden">
-                        <div class="p-3 border-b border-gray-700 flex-shrink-0"><div id="categorias-container" class="flex items-center gap-2 overflow-x-auto no-scrollbar"></div></div>
-                        <div id="produtos-container" class="flex-1 p-3 overflow-y-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
-                    </div>
-                    <div class="lg:w-1/3 p-4 flex flex-col bg-gray-900/50 border-t lg:border-t-0 lg:border-l border-gray-700">
-                        <h3 class="text-xl font-semibold mb-4 flex-shrink-0">Comanda da Mesa</h3>
-                        <div id="comanda-itens" class="flex-1 space-y-2 overflow-y-auto no-scrollbar pr-2 mb-4"></div>
-                        <div class="border-t border-gray-700 pt-4 flex-shrink-0">
-                            <div class="flex justify-between items-center text-2xl font-bold mb-4"><span>Total</span><span id="comanda-total">R$ 0,00</span></div>
-                            <button onclick="enviarPedido()" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition-colors shadow-lg flex items-center justify-center gap-2"><i class="fas fa-paper-plane"></i> Enviar para Cozinha</button>
-                        </div>
-                    </div>
-                </div>
-             </div>
-        </div>
-
-        <!-- MODAL DETALHE CAIXA -->
-        <div id="caixa-detalhe-view" class="hidden fixed inset-0 bg-gray-900/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-             <div class="bg-gray-800 w-full max-w-md h-auto max-h-[80vh] rounded-2xl shadow-2xl flex flex-col fade-in">
-                 <header class="p-4 border-b border-gray-700 flex justify-between items-center"><h2 class="text-2xl font-bold">Detalhes - <span id="caixa-mesa-numero"></span></h2><button onclick="fecharDetalheCaixaView()" class="text-gray-400 hover:text-white"><i class="fas fa-times text-2xl"></i></button></header>
-                <div class="p-6 overflow-y-auto no-scrollbar">
-                    <ul id="caixa-itens-lista" class="space-y-2 mb-6"></ul>
-                    <div class="border-t border-gray-700 pt-4">
-                        <div class="flex justify-between items-center text-3xl font-extrabold mb-6"><span>Total</span><span id="caixa-total-mesa">R$ 0,00</span></div>
-                        <button onclick="fecharConta()" class="w-full bg-blue-600 text-white font-bold py-4 px-4 rounded-lg hover:bg-blue-700 transition-colors shadow-lg text-lg flex items-center justify-center gap-2"><i class="fas fa-receipt"></i> Fechar Conta</button>
-                    </div>
-                </div>
-             </div>
-        </div>
-        
-        <!-- NOTIFICAÇÃO -->
+        <!-- MODAIS -->
+        <div id="pdv-view" class="hidden fixed inset-0 bg-gray-900/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50"></div>
+        <div id="caixa-detalhe-view" class="hidden fixed inset-0 bg-gray-900/70 backdrop-blur-sm flex items-center justify-center p-4 z-50"></div>
         <div id="notification" class="hidden fixed bottom-5 right-5 bg-green-500 text-white py-3 px-5 rounded-lg shadow-xl"><p></p></div>
 
     </div>
@@ -107,54 +71,47 @@
             appId: "1:537793587141:web:bc57fd34575ee2eb53bec"
         };
         
-        // CARDÁPIO COMPLETO
-        const cardapio = {
-            "Espetos": [{ id: 'esp-carne', nome: 'Carne', preco: 7.00 }, { id: 'esp-coracao', nome: 'Coração', preco: 6.00 }, { id: 'esp-misto', nome: 'Misto', preco: 7.00 }, { id: 'esp-frango', nome: 'Frango', preco: 6.00 }, { id: 'esp-frangobacon', nome: 'Frango c/ Bacon', preco: 8.00 }, { id: 'esp-calabresa', nome: 'Calabresa', preco: 6.00 }, { id: 'esp-queijo', nome: 'Queijo Coalho', preco: 6.00 }, { id: 'esp-tulipa', nome: 'Tulipa', preco: 8.00 }],
-            "Espetos Premium": [{ id: 'prem-filebacon', nome: 'Filé c/ Bacon', preco: 15.00 }, { id: 'prem-picanha', nome: 'Picanha', preco: 18.00 }],
-            "Entradas": [{ id: 'batata-p', nome: 'Batata Frita P', preco: 15.00 }, { id: 'batata-g', nome: 'Batata Frita G', preco: 25.00 }, { id: 'batata-cheddarbacon', nome: 'Batata c/ Cheddar & Bacon', preco: 30.00 }, { id: 'aneis-cebola', nome: 'Anéis de Cebola (12un)', preco: 18.00 }],
-            "Frango Frito": [{ id: 'frango-p', nome: 'Balde P (400g)', preco: 25.00 }, { id: 'frango-m', nome: 'Balde M (600g)', preco: 35.00 }, { id: 'frango-g', nome: 'Balde G (1kg)', preco: 55.00 }],
-            "Hambúrgueres": [{ id: 'burg-classic', nome: 'Classic Burger', preco: 20.00 }, { id: 'burg-salad', nome: 'Salad Burger', preco: 22.00 }, { id: 'burg-bacon', nome: 'Bacon Burger', preco: 25.00 }, { id: 'burg-urban', nome: 'Urban Norte Burger', preco: 30.00 }],
-            "Combos": [{ id: 'combo-classic', nome: 'Combo Classic', preco: 30.00 }, { id: 'combo-salad', nome: 'Combo Salad', preco: 32.00 }, { id: 'combo-bacon', nome: 'Combo Bacon', preco: 35.00 }],
-            "Bebidas": [{ id: 'refri-lata', nome: 'Refrigerante Lata', preco: 5.00 }, { id: 'agua-com-gas', nome: 'Água c/ Gás', preco: 4.00 }, { id: 'agua-sem-gas', nome: 'Água s/ Gás', preco: 3.00 }, { id: 'h2oh', nome: 'H2OH!', preco: 6.00 }, { id: 'suco-lata', nome: 'Suco Lata', preco: 6.00 }, { id: 'energetico', nome: 'Energético', preco: 12.00 }],
-            "Cervejas": [{ id: 'heineken-ln', nome: 'Heineken LN', preco: 10.00 }, { id: 'bud-ln', nome: 'Budweiser LN', preco: 9.00 }, { id: 'stella-ln', nome: 'Stella Artois LN', preco: 9.00 }, { id: 'heineken-600', nome: 'Heineken 600ml', preco: 18.00 }, { id: 'original-600', nome: 'Original 600ml', preco: 15.00 }, { id: 'bud-600', nome: 'Budweiser 600ml', preco: 15.00 }],
-            "Sucos & Doses": [{ id: 'suco-jarra', nome: 'Suco Jarra 1L', preco: 15.00 }, { id: 'dose-campari', nome: 'Dose Campari', preco: 10.00 }, { id: 'dose-gin', nome: 'Dose Gin', preco: 15.00 }, { id: 'dose-redlabel', nome: 'Dose Red Label', preco: 15.00 }, { id: 'dose-oldparr', nome: 'Dose Old Parr', preco: 18.00 }],
-            "Drinks": [{ id: 'drink-gintonica', nome: 'Gin Tônica', preco: 25.00 }, { id: 'drink-caipirinha', nome: 'Caipirinha', preco: 18.00 }]
-        };
+        const cardapio = { "Espetos": [{ id: 'esp-carne', nome: 'Carne', preco: 7.00 }, { id: 'esp-coracao', nome: 'Coração', preco: 6.00 }, { id: 'esp-misto', nome: 'Misto', preco: 7.00 }, { id: 'esp-frango', nome: 'Frango', preco: 6.00 }, { id: 'esp-frangobacon', nome: 'Frango c/ Bacon', preco: 8.00 }, { id: 'esp-calabresa', nome: 'Calabresa', preco: 6.00 }, { id: 'esp-queijo', nome: 'Queijo Coalho', preco: 6.00 }, { id: 'esp-tulipa', nome: 'Tulipa', preco: 8.00 }], "Espetos Premium": [{ id: 'prem-filebacon', nome: 'Filé c/ Bacon', preco: 15.00 }, { id: 'prem-picanha', nome: 'Picanha', preco: 18.00 }], "Entradas": [{ id: 'batata-p', nome: 'Batata Frita P', preco: 15.00 }, { id: 'batata-g', nome: 'Batata Frita G', preco: 25.00 }, { id: 'batata-cheddarbacon', nome: 'Batata c/ Cheddar & Bacon', preco: 30.00 }, { id: 'aneis-cebola', nome: 'Anéis de Cebola (12un)', preco: 18.00 }], "Frango Frito": [{ id: 'frango-p', nome: 'Balde P (400g)', preco: 25.00 }, { id: 'frango-m', nome: 'Balde M (600g)', preco: 35.00 }, { id: 'frango-g', nome: 'Balde G (1kg)', preco: 55.00 }], "Hambúrgueres": [{ id: 'burg-classic', nome: 'Classic Burger', preco: 20.00 }, { id: 'burg-salad', nome: 'Salad Burger', preco: 22.00 }, { id: 'burg-bacon', nome: 'Bacon Burger', preco: 25.00 }, { id: 'burg-urban', nome: 'Urban Norte Burger', preco: 30.00 }], "Combos": [{ id: 'combo-classic', nome: 'Combo Classic', preco: 30.00 }, { id: 'combo-salad', nome: 'Combo Salad', preco: 32.00 }, { id: 'combo-bacon', nome: 'Combo Bacon', preco: 35.00 }], "Bebidas": [{ id: 'refri-lata', nome: 'Refrigerante Lata', preco: 5.00 }, { id: 'agua-com-gas', nome: 'Água c/ Gás', preco: 4.00 }, { id: 'agua-sem-gas', nome: 'Água s/ Gás', preco: 3.00 }, { id: 'h2oh', nome: 'H2OH!', preco: 6.00 }, { id: 'suco-lata', nome: 'Suco Lata', preco: 6.00 }, { id: 'energetico', nome: 'Energético', preco: 12.00 }], "Cervejas": [{ id: 'heineken-ln', nome: 'Heineken LN', preco: 10.00 }, { id: 'bud-ln', nome: 'Budweiser LN', preco: 9.00 }, { id: 'stella-ln', nome: 'Stella Artois LN', preco: 9.00 }, { id: 'heineken-600', nome: 'Heineken 600ml', preco: 18.00 }, { id: 'original-600', nome: 'Original 600ml', preco: 15.00 }, { id: 'bud-600', nome: 'Budweiser 600ml', preco: 15.00 }], "Sucos & Doses": [{ id: 'suco-jarra', nome: 'Suco Jarra 1L', preco: 15.00 }, { id: 'dose-campari', nome: 'Dose Campari', preco: 10.00 }, { id: 'dose-gin', nome: 'Dose Gin', preco: 15.00 }, { id: 'dose-redlabel', nome: 'Dose Red Label', preco: 15.00 }, { id: 'dose-oldparr', nome: 'Dose Old Parr', preco: 18.00 }], "Drinks": [{ id: 'drink-gintonica', nome: 'Gin Tônica', preco: 25.00 }, { id: 'drink-caipirinha', nome: 'Caipirinha', preco: 18.00 }] };
 
-        let app, auth, db, perfilAtual, mesaSelecionada;
-        let comandaTemporaria = [];
-        let listeners = [];
-        let synth; 
+        let app, auth, db, perfilAtual, mesaSelecionada, comandaTemporaria = [], listeners = [], synth;
 
-        // INICIALIZAÇÃO E LÓGICA PRINCIPAL
-        const initFirebase = () => {
+        const initFirebase = async () => {
+            const statusEl = document.getElementById('connecting-status');
             try {
                 app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
+
                 onAuthStateChanged(auth, user => {
-                    const statusEl = document.getElementById('connecting-status');
                     if (user) {
-                        statusEl.textContent = "Conectado!"; statusEl.classList.remove('text-gray-500'); statusEl.classList.add('text-green-500');
-                    } else {
-                        signInAnonymously(auth).catch(err => {
-                             statusEl.textContent = "Erro de conexão.";
-                             statusEl.classList.remove('text-gray-500'); statusEl.classList.add('text-red-500');
-                        });
+                        statusEl.textContent = "Ligado!";
+                        statusEl.classList.remove('text-gray-500', 'text-red-500');
+                        statusEl.classList.add('text-green-500');
+                        document.querySelectorAll('#perfil-view button').forEach(b => b.disabled = false);
                     }
                 });
+
+                if (!auth.currentUser) {
+                    await signInAnonymously(auth);
+                }
+
                 document.body.addEventListener('click', () => {
                     if (!synth) synth = new Tone.Synth().toDestination();
                 }, { once: true });
 
-            } catch (e) { document.getElementById('connecting-status').textContent = 'Erro de Configuração.'; }
+            } catch (e) {
+                console.error("Erro de inicialização do Firebase:", e);
+                statusEl.textContent = 'Erro de Configuração.';
+                statusEl.classList.remove('text-gray-500');
+                statusEl.classList.add('text-red-500');
+            }
         };
         
         const selecionarPerfil = p => {
             perfilAtual = p;
             document.getElementById('perfil-view').classList.add('hidden');
             document.getElementById('main-view').classList.remove('hidden');
-            const titles = { caixa: 'Painel do Caixa', atendente: 'Mapa de Mesas', cozinha: 'Painel da Cozinha' };
+            const titles = { caixa: 'Painel da Caixa', atendente: 'Mapa de Mesas', cozinha: 'Painel da Cozinha' };
             document.getElementById('header-title').textContent = titles[p];
             ['mesas-view', 'cozinha-view'].forEach(v => document.getElementById(v).classList.add('hidden'));
             if (p === 'caixa' || p === 'atendente') {
@@ -213,16 +170,43 @@
             const mesaDoc = await getDoc(doc(db, "mesas", String(numero)));
             mesaSelecionada = { numero, ...mesaDoc.data() };
             comandaTemporaria = mesaSelecionada.itens ? JSON.parse(JSON.stringify(mesaSelecionada.itens)) : [];
-            document.getElementById('pdv-view').classList.remove('hidden');
+            const pdvView = document.getElementById('pdv-view');
+            pdvView.innerHTML = `
+             <div class="bg-gray-800 w-full max-w-7xl h-[95vh] rounded-2xl shadow-2xl flex flex-col fade-in">
+                <header class="p-4 border-b border-gray-700 flex justify-between items-center flex-shrink-0">
+                    <h2 class="text-2xl font-bold">PDV - Mesa ${numero}</h2>
+                    <button onclick="fecharPdvView()" class="text-gray-400 hover:text-white"><i class="fas fa-times text-2xl"></i></button>
+                </header>
+                <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+                    <div class="lg:w-2/3 flex flex-col overflow-hidden">
+                        <div class="p-3 border-b border-gray-700 flex-shrink-0"><div id="categorias-container" class="flex items-center gap-2 overflow-x-auto no-scrollbar"></div></div>
+                        <div id="produtos-container" class="flex-1 p-3 overflow-y-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
+                    </div>
+                    <div class="lg:w-1/3 p-4 flex flex-col bg-gray-900/50 border-t lg:border-t-0 lg:border-l border-gray-700">
+                        <h3 class="text-xl font-semibold mb-4 flex-shrink-0">Comanda da Mesa</h3>
+                        <div id="comanda-itens" class="flex-1 space-y-2 overflow-y-auto no-scrollbar pr-2 mb-4"></div>
+                        <div class="border-t border-gray-700 pt-4 flex-shrink-0">
+                            <div class="flex justify-between items-center text-2xl font-bold mb-4"><span>Total</span><span id="comanda-total">R$ 0,00</span></div>
+                            <button onclick="enviarPedido()" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition-colors shadow-lg flex items-center justify-center gap-2"><i class="fas fa-paper-plane"></i> Enviar para a Cozinha</button>
+                        </div>
+                    </div>
+                </div>
+             </div>`;
             renderCategorias(); renderProdutos(Object.keys(cardapio)[0]); renderComanda();
+            pdvView.classList.remove('hidden');
         };
         const fecharPdvView = () => {
             const el = document.getElementById('pdv-view');
-            el.querySelector('.fade-in').classList.add('fade-out');
-            setTimeout(() => {
+            const modal = el.querySelector('.fade-in');
+            if(modal) {
+                modal.classList.add('fade-out');
+                setTimeout(() => {
+                    el.classList.add('hidden');
+                    modal.classList.remove('fade-out');
+                }, 400);
+            } else {
                 el.classList.add('hidden');
-                el.querySelector('.fade-in').classList.remove('fade-out');
-            }, 400);
+            }
         };
         
         const renderCategorias = () => {
@@ -306,17 +290,13 @@
                 const itemOriginal = itensOriginais.find(i => i.id === item.id);
                 return { ...item, quantidade: itemOriginal ? item.quantidade - itemOriginal.quantidade : item.quantidade };
             });
-
             if (itensEnviados.length === 0) { showNotification('Nenhum item novo para enviar.', 'error'); return; }
-
             const batch = writeBatch(db);
             const pedidoCozinhaRef = doc(collection(db, "pedidos_cozinha"));
             batch.set(pedidoCozinhaRef, { mesa: mesaSelecionada.numero, itens: itensEnviados, status: 'pendente', criadoEm: serverTimestamp() });
-            
             const mesaRef = doc(db, "mesas", String(mesaSelecionada.numero));
             const novoTotal = comandaTemporaria.reduce((acc, item) => acc + (item.preco * item.quantidade), 0);
             batch.set(mesaRef, { status: 'ocupada', total: novoTotal, itens: comandaTemporaria, abertaEm: mesaSelecionada.abertaEm || serverTimestamp() }, { merge: true });
-            
             await batch.commit();
             showNotification(`Pedido da Mesa ${mesaSelecionada.numero} enviado!`);
             fecharPdvView();
@@ -326,59 +306,53 @@
             const q = query(collection(db, "pedidos_cozinha"), where("status", "==", "pendente"));
             const unsub = onSnapshot(q, (snapshot) => {
                 const grid = document.getElementById('pedidos-cozinha-grid');
-                grid.innerHTML = snapshot.empty ? `<p class="text-gray-400 col-span-full text-center mt-10">Nenhum pedido pendente.</p>` : '';
-                
+                if(!grid) return;
                 snapshot.docChanges().forEach((change) => {
                     if (change.type === "added") {
                          if (synth) synth.triggerAttackRelease("C5", "0.5");
+                         const doc = change.doc;
+                         const pedido = doc.data();
+                         const pedidoCard = document.createElement('div');
+                         pedidoCard.id = `pedido-${doc.id}`;
+                         pedidoCard.className = 'bg-gray-800 p-4 rounded-lg shadow-lg flex flex-col gap-3 fade-in';
+                         let itensHtml = pedido.itens.map(item => `<li class="flex justify-between text-lg"><span class="font-bold">${item.quantidade}x</span><span>${item.nome}</span></li>`).join('');
+                         pedidoCard.innerHTML = `<div class="flex justify-between items-center pb-2 border-b border-gray-700"><h3 class="text-2xl font-extrabold text-amber-400">Mesa ${pedido.mesa}</h3><span class="text-xs text-gray-400">${pedido.criadoEm ? new Date(pedido.criadoEm.toDate()).toLocaleTimeString() : ''}</span></div><ul class="space-y-1 flex-grow">${itensHtml}</ul><button onclick="marcarPedidoPronto('${doc.id}')" class="w-full mt-2 bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition-colors">Marcar como Pronto</button>`;
+                         grid.insertBefore(pedidoCard, grid.firstChild);
                     }
-                });
-
-                const docs = snapshot.docs.sort((a,b) => a.data().criadoEm?.toMillis() - b.data().criadoEm?.toMillis());
-                docs.forEach(doc => {
-                    const pedido = doc.data();
-                    let pedidoCard = document.getElementById(`pedido-${doc.id}`);
-                    if(!pedidoCard) {
-                        pedidoCard = document.createElement('div');
-                        pedidoCard.id = `pedido-${doc.id}`;
-                        pedidoCard.className = 'bg-gray-800 p-4 rounded-lg shadow-lg flex flex-col gap-3 fade-in';
-                        grid.insertBefore(pedidoCard, grid.firstChild);
-                    }
-                    
-                    let itensHtml = pedido.itens.map(item => `<li class="flex justify-between text-lg"><span class="font-bold">${item.quantidade}x</span><span>${item.nome}</span></li>`).join('');
-                    pedidoCard.innerHTML = `
-                        <div class="flex justify-between items-center pb-2 border-b border-gray-700"><h3 class="text-2xl font-extrabold text-amber-400">Mesa ${pedido.mesa}</h3><span class="text-xs text-gray-400">${pedido.criadoEm ? new Date(pedido.criadoEm.toDate()).toLocaleTimeString() : ''}</span></div>
-                        <ul class="space-y-1 flex-grow">${itensHtml}</ul>
-                        <button onclick="marcarPedidoPronto('${doc.id}')" class="w-full mt-2 bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition-colors">Marcar como Pronto</button>`;
-                });
-                 snapshot.docChanges().forEach((change) => {
                     if (change.type === "removed") {
                         const card = document.getElementById(`pedido-${change.doc.id}`);
                         if(card) card.remove();
                     }
                 });
-
+                if(snapshot.empty && grid) grid.innerHTML = `<p class="text-gray-400 col-span-full text-center mt-10">Nenhum pedido pendente.</p>`;
             });
             listeners.push(unsub);
         };
         const marcarPedidoPronto = async id => await updateDoc(doc(db, "pedidos_cozinha", id), { status: 'pronto' });
-
+        
         const abrirDetalheCaixaView = () => {
-            const modalContent = document.getElementById('caixa-detalhe-view');
-            const listaItens = modalContent.querySelector('#caixa-itens-lista');
-            if (listaItens) {
-                listaItens.innerHTML = '';
-                 if (mesaSelecionada.itens?.length > 0) {
-                     mesaSelecionada.itens.forEach(item => {
-                        const li = document.createElement('li'); li.className = "flex justify-between items-center text-lg";
-                        li.innerHTML = `<span>${item.quantidade}x ${item.nome}</span><span class="font-semibold">${formatCurrency(item.preco * item.quantidade)}</span>`;
-                        listaItens.appendChild(li);
-                    });
-                } else { listaItens.innerHTML = `<p class="text-gray-400">Nenhum item lançado.</p>`; }
-                modalContent.querySelector('#caixa-total-mesa').textContent = formatCurrency(mesaSelecionada.total || 0);
-                modalContent.querySelector('#caixa-mesa-numero').textContent = `Mesa ${mesaSelecionada.numero}`;
-            }
-            modalContent.classList.remove('hidden');
+            const modal = document.getElementById('caixa-detalhe-view');
+            modal.innerHTML = `
+             <div class="bg-gray-800 w-full max-w-md h-auto max-h-[80vh] rounded-2xl shadow-2xl flex flex-col fade-in">
+                 <header class="p-4 border-b border-gray-700 flex justify-between items-center"><h2 class="text-2xl font-bold">Detalhes - Mesa ${mesaSelecionada.numero}</h2><button onclick="fecharDetalheCaixaView()" class="text-gray-400 hover:text-white"><i class="fas fa-times text-2xl"></i></button></header>
+                <div class="p-6 overflow-y-auto no-scrollbar">
+                    <ul id="caixa-itens-lista" class="space-y-2 mb-6"></ul>
+                    <div class="border-t border-gray-700 pt-4">
+                        <div class="flex justify-between items-center text-3xl font-extrabold mb-6"><span>Total</span><span id="caixa-total-mesa">R$ 0,00</span></div>
+                        <button onclick="fecharConta()" class="w-full bg-blue-600 text-white font-bold py-4 px-4 rounded-lg hover:bg-blue-700 transition-colors shadow-lg text-lg flex items-center justify-center gap-2"><i class="fas fa-receipt"></i> Fechar Conta</button>
+                    </div>
+                </div>
+             </div>`;
+            const listaItens = modal.querySelector('#caixa-itens-lista');
+            if (mesaSelecionada.itens?.length > 0) {
+                 mesaSelecionada.itens.forEach(item => {
+                    const li = document.createElement('li'); li.className = "flex justify-between items-center text-lg";
+                    li.innerHTML = `<span>${item.quantidade}x ${item.nome}</span><span class="font-semibold">${formatCurrency(item.preco * item.quantidade)}</span>`;
+                    listaItens.appendChild(li);
+                });
+            } else { listaItens.innerHTML = `<p class="text-gray-400">Nenhum item lançado.</p>`; }
+            modal.querySelector('#caixa-total-mesa').textContent = formatCurrency(mesaSelecionada.total || 0);
+            modal.classList.remove('hidden');
         };
         const fecharDetalheCaixaView = () => document.getElementById('caixa-detalhe-view').classList.add('hidden');
         const fecharConta = async () => {
@@ -399,15 +373,7 @@
         };
         const formatCurrency = v => v.toLocaleString('pt-BR', { style: 'currency', 'currency': 'BRL' });
         
-        // ATRIBUIÇÃO GLOBAL DAS FUNÇÕES
-        window.selecionarPerfil = selecionarPerfil;
-        window.voltarParaPerfis = voltarParaPerfis;
-        window.fecharPdvView = fecharPdvView;
-        window.changeQty = changeQty;
-        window.enviarPedido = enviarPedido;
-        window.marcarPedidoPronto = marcarPedidoPronto;
-        window.fecharDetalheCaixaView = fecharDetalheCaixaView;
-        window.fecharConta = fecharConta;
+        window.selecionarPerfil = selecionarPerfil; window.voltarParaPerfis = voltarParaPerfis; window.fecharPdvView = fecharPdvView; window.changeQty = changeQty; window.enviarPedido = enviarPedido; window.marcarPedidoPronto = marcarPedidoPronto; window.fecharDetalheCaixaView = fecharDetalheCaixaView; window.fecharConta = fecharConta;
         
         initFirebase();
     </script>
