@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fagula Grill - PDV</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        .fade-out { animation: fadeOut 0.5s ease-in-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes fadeOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.95); } }
+    </style>
+</head>
+<body class="bg-gray-900 text-white overflow-hidden h-screen">
+
+    <div id="app" class="h-full flex flex-col">
+
+        <!-- TELA DE SELEÇÃO DE PERFIL -->
+        <div id="perfil-view" class="flex flex-col items-center justify-center h-full bg-gray-800 p-4 fade-in">
+            <div class="w-full max-w-sm bg-gray-900 p-8 rounded-2xl shadow-2xl text-center">
+                <i class="fas fa-utensils text-5xl text-amber-400 mb-4"></i>
+                <h1 class="text-4xl font-extrabold text-white mb-2">Fagula Grill</h1>
+                <p class="text-gray-400 mb-8">Selecione seu perfil para iniciar</p>
+                <div class="space-y-4">
+                    <button onclick="selecionarPerfil('caixa')" class="w-full text-lg bg-blue-600 text-white font-bold py-4 px-4 rounded-xl hover:bg-blue-700 transition-all duration-300 shadow-lg flex items-center justify-center gap-3"><i class="fas fa-cash-register"></i>Caixa</button>
+                    <button onclick="selecionarPerfil('atendente')" class="w-full text-lg bg-green-600 text-white font-bold py-4 px-4 rounded-xl hover:bg-green-700 transition-all duration-300 shadow-lg flex items-center justify-center gap-3"><i class="fas fa-user-tie"></i>Atendente</button>
+                    <button onclick="selecionarPerfil('cozinha')" class="w-full text-lg bg-orange-600 text-white font-bold py-4 px-4 rounded-xl hover:bg-orange-700 transition-all duration-300 shadow-lg flex items-center justify-center gap-3"><i class="fas fa-fire-burner"></i>Cozinha</button>
+                </div>
+                <p id="connecting-status" class="text-gray-500 text-sm mt-6">Conectando ao sistema...</p>
+            </div>
+        </div>
+
+        <!-- CONTEÚDO PRINCIPAL -->
+        <div id="main-view" class="hidden h-full flex flex-col">
+            <header class="bg-gray-900/80 backdrop-blur-sm p-4 flex justify-between items-center border-b border-gray-700">
+                <div><h1 class="text-2xl font-bold" id="header-title"></h1></div>
+                <button onclick="voltarParaPerfis()" class="bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors"><i class="fas fa-exchange-alt mr-2"></i>Trocar Perfil</button>
+            </header>
+            <main class="flex-1 overflow-y-auto p-4 sm:p-6">
+                <div id="mesas-view" class="hidden"><div id="mesas-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-4"></div></div>
+                <div id="cozinha-view" class="hidden"><div id="pedidos-cozinha-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div></div>
+            </main>
+        </div>
+        
+        <!-- MODAL PDV -->
+        <div id="pdv-view" class="hidden fixed inset-0 bg-gray-900/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50 fade-in">
+             <div class="bg-gray-800 w-full max-w-7xl h-[95vh] rounded-2xl shadow-2xl flex flex-col">
+                <header class="p-4 border-b border-gray-700 flex justify-between items-center flex-shrink-0">
+                    <h2 class="text-2xl font-bold">PDV - <span id="pdv-mesa-numero"></span></h2>
+                    <button onclick="fecharPdvView()" class="text-gray-400 hover:text-white"><i class="fas fa-times text-2xl"></i></button>
+                </header>
+                <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+                    <div class="lg:w-2/3 flex flex-col overflow-hidden">
+                        <div class="p-3 border-b border-gray-700 flex-shrink-0"><div id="categorias-container" class="flex items-center gap-2 overflow-x-auto no-scrollbar"></div></div>
+                        <div id="produtos-container" class="flex-1 p-3 overflow-y-auto grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
+                    </div>
+                    <div class="lg:w-1/3 p-4 flex flex-col bg-gray-900/50 border-t lg:border-t-0 lg:border-l border-gray-700">
+                        <h3 class="text-xl font-semibold mb-4 flex-shrink-0">Comanda da Mesa</h3>
+                        <div id="comanda-itens" class="flex-1 space-y-2 overflow-y-auto no-scrollbar pr-2 mb-4"></div>
+                        <div class="border-t border-gray-700 pt-4 flex-shrink-0">
+                            <div class="flex justify-between items-center text-2xl font-bold mb-4"><span>Total</span><span id="comanda-total">R$ 0,00</span></div>
+                            <button onclick="enviarPedido()" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition-colors shadow-lg flex items-center justify-center gap-2"><i class="fas fa-paper-plane"></i> Enviar para Cozinha</button>
+                        </div>
+                    </div>
+                </div>
+             </div>
+        </div>
+
+        <!-- MODAL DETALHE CAIXA -->
+        <div id="caixa-detalhe-view" class="hidden fixed inset-0 bg-gray-900/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 fade-in">
+             <div class="bg-gray-800 w-full max-w-md h-auto max-h-[80vh] rounded-2xl shadow-2xl flex flex-col">
+                 <header class="p-4 border-b border-gray-700 flex justify-between items-center"><h2 class="text-2xl font-bold">Detalhes - <span id="caixa-mesa-numero"></span></h2><button onclick="fecharDetalheCaixaView()" class="text-gray-400 hover:text-white"><i class="fas fa-times text-2xl"></i></button></header>
+                <div class="p-6 overflow-y-auto no-scrollbar">
+                    <ul id="caixa-itens-lista" class="space-y-2 mb-6"></ul>
+                    <div class="border-t border-gray-700 pt-4">
+                        <div class="flex justify-between items-center text-3xl font-extrabold mb-6"><span>Total</span><span id="caixa-total-mesa">R$ 0,00</span></div>
+                        <button onclick="fecharConta()" class="w-full bg-blue-600 text-white font-bold py-4 px-4 rounded-lg hover:bg-blue-700 transition-colors shadow-lg text-lg flex items-center justify-center gap-2"><i class="fas fa-receipt"></i> Fechar Conta</button>
+                    </div>
+                </div>
+             </div>
+        </div>
+        
+        <!-- NOTIFICAÇÃO -->
+        <div id="notification" class="hidden fixed bottom-5 right-5 bg-green-500 text-white py-3 px-5 rounded-lg shadow-xl fade-in"><p></p></div>
+
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, collection, setDoc, writeBatch, serverTimestamp, updateDoc, query, where, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDI-L3zN0n_WjYd9_B6v2r8o_q_i-F-rQ",
+            authDomain: "fagula-grill.firebaseapp.com",
+            projectId: "fagula-grill",
+            storageBucket: "fagula-grill.appspot.com",
+            messagingSenderId: "537793587141",
+            appId: "1:537793587141:web:bc57fd34575ee2eb53bec"
+        };
+        
+        // CARDÁPIO COMPLETO
+        const cardapio = {
+            "Espetos": [
+                { id: 'esp-carne', nome: 'Carne', preco: 7.00 }, { id: 'esp-coracao', nome: 'Coração', preco: 6.00 }, { id: 'esp-misto', nome: 'Misto', preco: 7.00 }, { id: 'esp-frango', nome: 'Frango', preco: 6.00 }, { id: 'esp-frangobacon', nome: 'Frango c/ Bacon', preco: 8.00 }, { id: 'esp-calabresa', nome: 'Calabresa', preco: 6.00 }, { id: 'esp-queijo', nome: 'Queijo Coalho', preco: 6.00 }, { id: 'esp-tulipa', nome: 'Tulipa', preco: 8.00 }
+            ],
+            "Espetos Premium": [
+                { id: 'prem-filebacon', nome: 'Filé c/ Bacon', preco: 15.00 }, { id: 'prem-picanha', nome: 'Picanha', preco: 18.00 }
+            ],
+            "Entradas": [
+                { id: 'batata-p', nome: 'Batata Frita P', preco: 15.00 }, { id: 'batata-g', nome: 'Batata Frita G', preco: 25.00 }, { id: 'batata-cheddarbacon', nome: 'Batata c/ Cheddar & Bacon', preco: 30.00 }, { id: 'aneis-cebola', nome: 'Anéis de Cebola (12un)', preco: 18.00 }
+            ],
+            "Frango Frito": [
+                { id: 'frango-p', nome: 'Balde P (400g)', preco: 25.00 }, { id: 'frango-m', nome: 'Balde M (600g)', preco: 35.00 }, { id: 'frango-g', nome: 'Balde G (1kg)', preco: 55.00 }
+            ],
+            "Hambúrgueres": [
+                { id: 'burg-classic', nome: 'Classic Burger', preco: 20.00 }, { id: 'burg-salad', nome: 'Salad Burger', preco: 22.00 }, { id: 'burg-bacon', nome: 'Bacon Burger', preco: 25.00 }, { id: 'burg-urban', nome: 'Urban Norte Burger', preco: 30.00 }
+            ],
+            "Combos": [
+                { id: 'combo-classic', nome: 'Combo Classic', preco: 30.00 }, { id: 'combo-salad', nome: 'Combo Salad', preco: 32.00 }, { id: 'combo-bacon', nome: 'Combo Bacon', preco: 35.00 }
+            ],
+            "Bebidas": [
+                { id: 'refri-lata', nome: 'Refrigerante Lata', preco: 5.00 }, { id: 'agua-com-gas', nome: 'Água c/ Gás', preco: 4.00 }, { id: 'agua-sem-gas', nome: 'Água s/ Gás', preco: 3.00 }, { id: 'h2oh', nome: 'H2OH!', preco: 6.00 }, { id: 'suco-lata', nome: 'Suco Lata', preco: 6.00 }, { id: 'energetico', nome: 'Energético', preco: 12.00 }
+            ],
+            "Cervejas": [
+                { id: 'heineken-ln', nome: 'Heineken LN', preco: 10.00 }, { id: 'bud-ln', nome: 'Budweiser LN', preco: 9.00 }, { id: 'stella-ln', nome: 'Stella Artois LN', preco: 9.00 }, { id: 'heineken-600', nome: 'Heineken 600ml', preco: 18.00 }, { id: 'original-600', nome: 'Original 600ml', preco: 15.00 }, { id: 'bud-600', nome: 'Budweiser 600ml', preco: 15.00 }
+            ],
+            "Sucos & Doses": [
+                { id: 'suco-jarra', nome: 'Suco Jarra 1L', preco: 15.00 }, { id: 'dose-campari', nome: 'Dose Campari', preco: 10.00 }, { id: 'dose-gin', nome: 'Dose Gin', preco: 15.00 }, { id: 'dose-redlabel', nome: 'Dose Red Label', preco: 15.00 }, { id: 'dose-oldparr', nome: 'Dose Old Parr', preco: 18.00 }
+            ],
+            "Drinks": [
+                { id: 'drink-gintonica', nome: 'Gin Tônica', preco: 25.00 }, { id: 'drink-caipirinha', nome: 'Caipirinha', preco: 18.00 }
+            ]
+        };
+
+        let app, auth, db, perfilAtual, mesaSelecionada;
+        let comandaTemporaria = [];
+        let listeners = [];
+
+        function initFirebase() {
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                onAuthStateChanged(auth, user => {
+                    const statusEl = document.getElementById('connecting-status');
+                    if (user) {
+                        statusEl.textContent = "Conectado!"; statusEl.classList.add('text-green-500');
+                    } else {
+                        signInAnonymously(auth).catch(err => statusEl.textContent = "Erro de conexão.");
+                    }
+                });
+            } catch (e) { document.getElementById('connecting-status').textContent = 'Erro de Configuração.'; }
+        }
+        
+        window.selecionarPerfil = p => {
+            perfilAtual = p;
+            document.getElementById('perfil-view').classList.add('hidden');
+            document.getElementById('main-view').classList.remove('hidden');
+            const titles = { caixa: 'Painel do Caixa', atendente: 'Mapa de Mesas', cozinha: 'Painel da Cozinha' };
+            document.getElementById('header-title').textContent = titles[p];
+            ['mesas-view', 'cozinha-view'].forEach(v => document.getElementById(v).classList.add('hidden'));
+            if (p === 'caixa' || p === 'atendente') {
+                document.getElementById('mesas-view').classList.remove('hidden'); setupMesasView();
+            } else {
+                document.getElementById('cozinha-view').classList.remove('hidden'); setupCozinhaView();
+            }
+        };
+
+        window.voltarParaPerfis = () => {
+            perfilAtual = null;
+            document.getElementById('perfil-view').classList.remove('hidden');
+            document.getElementById('main-view').classList.add('hidden');
+            listeners.forEach(unsub => unsub()); listeners = [];
+            fecharPdvView(); fecharDetalheCaixaView();
+        };
+
+        function setupMesasView() {
+            const grid = document.getElementById('mesas-grid'); grid.innerHTML = '';
+            for (let i = 1; i <= 50; i++) {
+                const mesaEl = document.createElement('div'); mesaEl.id = `mesa-${i}`;
+                mesaEl.className = 'p-2 rounded-lg text-center cursor-pointer transition-all duration-300';
+                mesaEl.innerHTML = `<div class="font-extrabold text-3xl">${i}</div><div class="text-xs font-semibold"></div>`;
+                grid.appendChild(mesaEl);
+            }
+            const unsub = onSnapshot(collection(db, "mesas"), snapshot => {
+                let mesasAtivas = new Set();
+                snapshot.forEach(doc => { updateMesaCard(doc.id, doc.data()); mesasAtivas.add(doc.id); });
+                for (let i = 1; i <= 50; i++) if (!mesasAtivas.has(String(i))) updateMesaCard(i, { status: 'livre' });
+            });
+            listeners.push(unsub);
+        }
+
+        function updateMesaCard(numero, data) {
+            const mesaEl = document.getElementById(`mesa-${numero}`); if (!mesaEl) return;
+            const status = data.status || 'livre'; const total = data.total || 0;
+            mesaEl.classList.remove('bg-green-600', 'bg-red-600', 'hover:bg-green-500', 'hover:bg-red-500');
+            if (status === 'livre') {
+                mesaEl.classList.add('bg-green-600', 'hover:bg-green-500'); mesaEl.children[1].textContent = 'Livre';
+            } else {
+                mesaEl.classList.add('bg-red-600', 'hover:bg-red-500'); mesaEl.children[1].textContent = formatCurrency(total);
+            }
+            mesaEl.onclick = () => handleMesaClick(numero, status, data);
+        }
+
+        async function handleMesaClick(numero, status, data) {
+            mesaSelecionada = { numero, status, ...data };
+            if (perfilAtual === 'atendente') await abrirPdvView(numero);
+            else if (perfilAtual === 'caixa' && status === 'ocupada') abrirDetalheCaixaView();
+        }
+
+        async function abrirPdvView(numero) {
+            const mesaDoc = await getDoc(doc(db, "mesas", String(numero)));
+            mesaSelecionada = { numero, ...mesaDoc.data() };
+            comandaTemporaria = mesaSelecionada.itens ? JSON.parse(JSON.stringify(mesaSelecionada.itens)) : [];
+            document.getElementById('pdv-mesa-numero').textContent = `Mesa ${numero}`;
+            renderCategorias(); renderProdutos(Object.keys(cardapio)[0]); renderComanda();
+            document.getElementById('pdv-view').classList.remove('hidden');
+        }
+        window.fecharPdvView = () => document.getElementById('pdv-view').classList.add('hidden');
+
+        function renderCategorias() {
+            const container = document.getElementById('categorias-container');
+            container.innerHTML = '';
+            Object.keys(cardapio).forEach((categoria, index) => {
+                const button = document.createElement('button');
+                button.textContent = categoria;
+                button.className = `py-2 px-4 rounded-full font-semibold transition-colors text-sm whitespace-nowrap ${index === 0 ? 'bg-amber-500 text-white' : 'bg-gray-700 hover:bg-gray-600'}`;
+                button.onclick = () => {
+                    renderProdutos(categoria);
+                    container.querySelectorAll('button').forEach(btn => btn.classList.replace('bg-amber-500', 'bg-gray-700'));
+                    button.classList.replace('bg-gray-700', 'bg-amber-500');
+                };
+                container.appendChild(button);
+            });
+        }
+        
+        function renderProdutos(categoria) {
+            const container = document.getElementById('produtos-container');
+            container.innerHTML = '';
+            cardapio[categoria].forEach(item => {
+                const card = document.createElement('div');
+                card.className = "bg-gray-700 p-3 rounded-lg shadow hover:bg-gray-600 text-left transition-all duration-200 transform hover:scale-105 cursor-pointer flex flex-col justify-between";
+                card.innerHTML = `<div><p class="font-semibold text-white">${item.nome}</p></div><p class="text-lg text-amber-400 font-bold mt-2">${formatCurrency(item.preco)}</p>`;
+                card.onclick = () => adicionarItem(item);
+                container.appendChild(card);
+            });
+        }
+        
+        function adicionarItem(item) {
+            const itemExistente = comandaTemporaria.find(i => i.id === item.id);
+            if (itemExistente) itemExistente.quantidade++;
+            else comandaTemporaria.push({ ...item, quantidade: 1 });
+            renderComanda();
+        }
+        
+        window.changeQty = (itemId, amount) => {
+            const itemIndex = comandaTemporaria.findIndex(i => i.id === itemId);
+            if (itemIndex > -1) {
+                comandaTemporaria[itemIndex].quantidade += amount;
+                if (comandaTemporaria[itemIndex].quantidade <= 0) comandaTemporaria.splice(itemIndex, 1);
+            }
+            renderComanda();
+        };
+
+        function renderComanda() {
+            const container = document.getElementById('comanda-itens');
+            const totalEl = document.getElementById('comanda-total');
+            let total = 0;
+            if(comandaTemporaria.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-500 mt-10">Adicione itens do cardápio</p>';
+                totalEl.textContent = formatCurrency(0); return;
+            }
+            container.innerHTML = '';
+            comandaTemporaria.forEach(item => {
+                total += item.preco * item.quantidade;
+                const itemDiv = document.createElement('div');
+                itemDiv.className = "flex justify-between items-center bg-gray-700/50 p-2 rounded";
+                itemDiv.innerHTML = `
+                    <div><p class="font-medium">${item.nome}</p><p class="text-xs text-gray-400">${formatCurrency(item.preco)}</p></div>
+                    <div class="flex items-center gap-3">
+                        <button class="bg-gray-600 w-6 h-6 rounded-full font-bold" onclick="changeQty('${item.id}', -1)">-</button>
+                        <span class="font-bold w-4 text-center">${item.quantidade}</span>
+                        <button class="bg-gray-600 w-6 h-6 rounded-full font-bold" onclick="changeQty('${item.id}', 1)">+</button>
+                    </div>`;
+                container.appendChild(itemDiv);
+            });
+            totalEl.textContent = formatCurrency(total);
+        }
+
+        window.enviarPedido = async () => {
+            const itensEnviados = comandaTemporaria.filter(item => {
+                const itemOriginal = (mesaSelecionada.itens || []).find(i => i.id === item.id);
+                return !itemOriginal || item.quantidade > itemOriginal.quantidade;
+            }).map(item => {
+                const itemOriginal = (mesaSelecionada.itens || []).find(i => i.id === item.id);
+                const novaQuantidade = itemOriginal ? item.quantidade - itemOriginal.quantidade : item.quantidade;
+                return { ...item, quantidade: novaQuantidade };
+            });
+
+            if (itensEnviados.length === 0) { showNotification('Nenhum item novo para enviar.', 'error'); return; }
+
+            const batch = writeBatch(db);
+            const pedidoCozinhaRef = doc(collection(db, "pedidos_cozinha"));
+            batch.set(pedidoCozinhaRef, { mesa: mesaSelecionada.numero, itens: itensEnviados, status: 'pendente', criadoEm: serverTimestamp() });
+            
+            const mesaRef = doc(db, "mesas", String(mesaSelecionada.numero));
+            const novoTotal = comandaTemporaria.reduce((acc, item) => acc + (item.preco * item.quantidade), 0);
+            batch.set(mesaRef, { status: 'ocupada', total: novoTotal, itens: comandaTemporaria, abertaEm: mesaSelecionada.abertaEm || serverTimestamp() }, { merge: true });
+            
+            await batch.commit();
+            showNotification(`Pedido da Mesa ${mesaSelecionada.numero} enviado!`);
+            fecharPdvView();
+        };
+
+        function setupCozinhaView() {
+            const q = query(collection(db, "pedidos_cozinha"), where("status", "==", "pendente"));
+            const unsub = onSnapshot(q, snapshot => {
+                const grid = document.getElementById('pedidos-cozinha-grid');
+                grid.innerHTML = snapshot.empty ? `<p class="text-gray-400 col-span-full text-center mt-10">Nenhum pedido pendente.</p>` : '';
+                snapshot.docs.sort((a,b) => a.data().criadoEm - b.data().criadoEm).forEach(doc => {
+                    const pedido = doc.data();
+                    const pedidoCard = document.createElement('div');
+                    pedidoCard.className = 'bg-gray-800 p-4 rounded-lg shadow-lg flex flex-col gap-3 fade-in';
+                    let itensHtml = pedido.itens.map(item => `<li class="flex justify-between text-lg"><span class="font-bold">${item.quantidade}x</span><span>${item.nome}</span></li>`).join('');
+                    pedidoCard.innerHTML = `
+                        <div class="flex justify-between items-center pb-2 border-b border-gray-700"><h3 class="text-2xl font-extrabold text-amber-400">Mesa ${pedido.mesa}</h3><span class="text-xs text-gray-400">${new Date(pedido.criadoEm?.toDate()).toLocaleTimeString()}</span></div>
+                        <ul class="space-y-1 flex-grow">${itensHtml}</ul>
+                        <button onclick="marcarPedidoPronto('${doc.id}')" class="w-full mt-2 bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition-colors">Marcar como Pronto</button>`;
+                    grid.appendChild(pedidoCard);
+                });
+            });
+            listeners.push(unsub);
+        }
+        window.marcarPedidoPronto = async id => await updateDoc(doc(db, "pedidos_cozinha", id), { status: 'pronto' });
+
+        function abrirDetalheCaixaView() {
+            document.getElementById('caixa-mesa-numero').textContent = `Mesa ${mesaSelecionada.numero}`;
+            const listaItens = document.getElementById('caixa-itens-lista'); listaItens.innerHTML = '';
+            if (mesaSelecionada.itens?.length > 0) {
+                 mesaSelecionada.itens.forEach(item => {
+                    const li = document.createElement('li'); li.className = "flex justify-between items-center text-lg";
+                    li.innerHTML = `<span>${item.quantidade}x ${item.nome}</span><span class="font-semibold">${formatCurrency(item.preco * item.quantidade)}</span>`;
+                    listaItens.appendChild(li);
+                });
+            } else { listaItens.innerHTML = `<p class="text-gray-400">Nenhum item lançado.</p>`; }
+            document.getElementById('caixa-total-mesa').textContent = formatCurrency(mesaSelecionada.total || 0);
+            document.getElementById('caixa-detalhe-view').classList.remove('hidden');
+        }
+        window.fecharDetalheCaixaView = () => document.getElementById('caixa-detalhe-view').classList.add('hidden');
+        window.fecharConta = async () => {
+            if (!mesaSelecionada) return;
+            const mesaRef = doc(db, "mesas", String(mesaSelecionada.numero));
+            await setDoc(mesaRef, { status: 'livre', total: 0, itens: [] });
+            showNotification(`Mesa ${mesaSelecionada.numero} fechada com sucesso!`);
+            fecharDetalheCaixaView();
+        }
+
+        function showNotification(message, type = 'success') {
+            const el = document.getElementById('notification');
+            el.querySelector('p').textContent = message;
+            el.classList.remove('hidden', 'bg-green-500', 'bg-red-500');
+            el.classList.add(type === 'success' ? 'bg-green-500' : 'bg-red-500');
+            setTimeout(() => el.classList.add('hidden'), 3000);
+        }
+        const formatCurrency = v => v.toLocaleString('pt-BR', { style: 'currency', 'currency': 'BRL' });
+        
+        // --- INICIALIZAÇÃO ---
+        window.onload = initFirebase;
+        window.renderCategorias = renderCategorias; window.renderProdutos = renderProdutos;
+    </script>
+</body>
+</html>
