@@ -492,43 +492,60 @@
             listenToPedidosCozinha();
         };
 
-        const listenToPedidosCozinha = () => {
-            const q = query(collection(db, "pedidos_cozinha"), where("status", "in", ["pendente", "pronto"]), orderBy("criadoEm"));
+                const listenToPedidosCozinha = () => {
+            // CORREÇÃO: Removido o 'orderBy("criadoEm")' da consulta para evitar o bug de sincronização
+            const q = query(collection(db, "pedidos_cozinha"), where("status", "in", ["pendente", "pronto"]));
+            
             const unsub = onSnapshot(q, (snapshot) => {
                 const colPendente = document.getElementById('col-pendente');
                 const colPronto = document.getElementById('col-pronto');
                 if(!colPendente || !colPronto) return;
 
-                let hasPending = false;
-                let hasReady = false;
+                // Limpa as colunas para redesenhar
+                colPendente.innerHTML = '';
+                colPronto.innerHTML = '';
 
+                // Dispara o som para qualquer pedido novo que chegue como "pendente"
                 snapshot.docChanges().forEach(change => {
-                    const pedido = { id: change.doc.id, ...change.doc.data() };
-                    const cardId = `pedido-${pedido.id}`;
-
-                    // Remove card from old column if it exists
-                    const existingCard = document.getElementById(cardId);
-                    if (existingCard) existingCard.remove();
-                    
-                    // Add card to new column
-                    if (pedido.status === 'pendente') {
-                        colPendente.appendChild(createPedidoCard(pedido));
-                        hasPending = true;
-                    } else if (pedido.status === 'pronto') {
-                        colPronto.appendChild(createPedidoCard(pedido));
-                        hasReady = true;
-                    }
-                    
-                    // Sound notification for new pending orders
-                    if (change.type === "added" && pedido.status === 'pendente' && synth) {
+                    if (change.type === "added" && change.doc.data().status === 'pendente' && synth) {
                         synth.triggerAttackRelease("C5", "0.5");
                     }
+                    // Adicionado para o cancelamento funcionar visualmente
+                    if (change.type === "modified" && change.doc.data().status === 'cancelado') {
+                        const cardId = `pedido-${change.doc.id}`;
+                        const card = document.getElementById(cardId);
+                        if (card) {
+                            card.classList.add('bg-red-800');
+                            setTimeout(() => card.remove(), 500);
+                        }
+                    }
                 });
-                
-                // Update empty state messages
-                if (!hasPending && colPendente.innerHTML === '') colPendente.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum pedido.</p>`;
-                if (!hasReady && colPronto.innerHTML === '') colPronto.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum pedido.</p>`;
 
+                // CORREÇÃO: Ordena os pedidos aqui no navegador, e não no banco de dados
+                const sortedDocs = snapshot.docs.sort((a, b) => (a.data().criadoEm?.seconds || 0) - (b.data().criadoEm?.seconds || 0));
+
+                if(sortedDocs.length === 0) {
+                    colPendente.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum pedido pendente.</p>`;
+                    colPronto.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum pedido pronto.</p>`;
+                } else {
+                    let hasPending = false;
+                    let hasReady = false;
+                    
+                    sortedDocs.forEach(doc => {
+                        const pedido = {id: doc.id, ...doc.data()};
+                        if(pedido.status === 'pendente') {
+                            colPendente.appendChild(createPedidoCard(pedido));
+                            hasPending = true;
+                        } else if(pedido.status === 'pronto') {
+                            colPronto.appendChild(createPedidoCard(pedido));
+                            hasReady = true;
+                        }
+                    });
+
+                    if (!hasPending) colPendente.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum pedido pendente.</p>`;
+                    if (!hasReady) colPronto.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum pedido pronto.</p>`;
+                }
+                
                 if (!window.cozinhaTimerInterval) {
                    window.cozinhaTimerInterval = setInterval(updateTimers, 1000);
                 }
