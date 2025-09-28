@@ -80,7 +80,6 @@
             measurementId: "G-LGJBCZGC4C"
         };
         
-        // O cardápio permanece o mesmo
         const cardapio = { "Espetos Clássicos": [ { id: 'esp-frango', nome: 'Frango', preco: 10.00 }, { id: 'esp-coracao', nome: 'Coração', preco: 10.00 }, { id: 'esp-linguica', nome: 'Linguiça', preco: 10.00 }, { id: 'esp-paoalho', nome: 'Pão de Alho', preco: 10.00 }, { id: 'esp-santamassa', nome: 'Santa Massa', preco: 10.00 }, { id: 'esp-queijo', nome: 'Queijo Coalho', preco: 12.00 }, { id: 'esp-torresmo-espeto', nome: 'Torresmo', preco: 12.00 }, { id: 'esp-kafta', nome: 'Kafta', preco: 12.00 }, { id: 'esp-alcatra', nome: 'Alcatra', preco: 14.00 } ], "Espetos Premium": [ { id: 'prem-costela', nome: 'Costela', preco: 18.00 }, { id: 'prem-picanha', nome: 'Picanha', preco: 18.00, description: 'Maturatta Friboi' }, { id: 'prem-medalhao-alcatra', nome: 'Medalhão de Alcatra', preco: 18.00 }, { id: 'prem-medalhao-palmito', nome: 'Medalhão de Palmito', preco: 18.00 }, { id: 'prem-kafta-queijo', nome: 'Kafta com Queijo', preco: 16.00 }, { id: 'prem-medalhao-frango', nome: 'Medalhão de Frango', preco: 16.00 }, { id: 'prem-romeujulieta', nome: 'Medalhão Romeu e Julieta', preco: 16.00 }, { id: 'prem-almondega', nome: 'Medalhão de Almôndega', preco: 16.00 }, { id: 'prem-vegetariano', nome: 'Vegetariano', preco: 16.00 }, { id: 'prem-mandioca', nome: 'Medalhão de Mandioca', preco: 16.00, description: 'Com carne seca e queijo' } ], "Entradas": [ { id: 'ent-torresmo', nome: 'Torresmo (Individual)', preco: 24.00, description: 'Barrinha de panceta' }, { id: 'ent-bolinho-costela', nome: 'Bolinho de Costela (3und)', preco: 24.00 }, { id: 'ent-pao-kafta', nome: 'Pão de Alho com Kafta e Queijo', preco: 24.00 }, { id: 'ent-porpetone', nome: 'Porpetone', preco: 26.00, description: 'Bolo de carne artesanal recheado com queijo assado na churrasqueira' }, { id: 'ent-salaminho', nome: 'Salaminho (100g)', preco: 18.00 }, { id: 'ent-frios', nome: 'Pratinho de Frios', preco: 39.00, description: 'Salame, mussarela, ovo de codorna e azeitonas' }, { id: 'ent-paolica', nome: 'Pãoliça (Porção Individual)', preco: 19.00, description: 'Massa de linguiça temperada, queijo mussarela e molho verde no pão francês grelhado' } ], "Acompanhamentos": [ { id: 'acomp-trio', nome: 'Trio', preco: 10.00, description: 'Vinagrete, farofa e molho verde' } ], "Bebidas & Cia": [ { id: 'refri-lata', nome: 'Refrigerante Lata', preco: 5.00 }, { id: 'agua-com-gas', nome: 'Água c/ Gás', preco: 4.00 }, { id: 'agua-sem-gas', nome: 'Água s/ Gás', preco: 3.00 }, { id: 'h2oh', nome: 'H2OH!', preco: 6.00 }, { id: 'suco-lata', nome: 'Suco Lata', preco: 6.00 }, { id: 'energetico', nome: 'Energético', preco: 12.00 }, { id: 'heineken-ln', nome: 'Heineken LN', preco: 10.00 }, { id: 'bud-ln', nome: 'Budweiser LN', preco: 9.00 }, { id: 'stella-ln', nome: 'Stella Artois LN', preco: 9.00 }, { id: 'heineken-600', nome: 'Heineken 600ml', preco: 18.00 }, { id: 'original-600', nome: 'Original 600ml', preco: 15.00 }, { id: 'bud-600', nome: 'Budweiser 600ml', preco: 15.00 }, { id: 'suco-jarra', nome: 'Suco Jarra 1L', preco: 15.00 }, { id: 'dose-campari', nome: 'Dose Campari', preco: 10.00 }, { id: 'dose-gin', nome: 'Dose Gin', preco: 15.00 }, { id: 'dose-redlabel', nome: 'Dose Red Label', preco: 15.00 }, { id: 'dose-oldparr', nome: 'Dose Old Parr', preco: 18.00 }, { id: 'drink-gintonica', nome: 'Gin Tônica', preco: 25.00 }, { id: 'drink-caipirinha', nome: 'Caipirinha', preco: 18.00 } ] };
 
         // Variáveis globais
@@ -284,43 +283,46 @@
             const senha = document.getElementById('novo-senha').value;
             const perfil = document.getElementById('novo-perfil').value;
 
-            if(!nome || !email || !senha || !perfil) {
-                showNotification("Preencha todos os campos.", "error");
+            if (!nome || !email || !senha || !perfil) {
+                showNotification("Preencha todos os campos do novo usuário.", "error");
                 return;
             }
 
-            try {
-                // Para evitar conflito de login, criamos o usuário com uma instância de auth secundária
-                // Esta é uma abordagem avançada. A mais simples é deslogar e relogar, mas vamos manter o fluxo.
-                // A forma mais segura e recomendada é usar Firebase Functions para criar usuários.
-                // Por simplicidade no frontend, vamos alertar o usuário que a tela pode recarregar.
-                
-                // NOTA: O Firebase SDK do cliente não foi projetado para criar usuários enquanto outro está logado.
-                // A abordagem correta é via Cloud Functions. Como paliativo, faremos em duas etapas.
-                showNotification("Criando usuário... O sistema pode pedir para relogar em breve.", "info");
+            // --- Início da Mágica: Conexão Temporária ---
+            const appName = `temp-user-creation-${Date.now()}`;
+            const tempApp = initializeApp(firebaseConfig, appName);
+            const tempAuth = getAuth(tempApp);
+            // --- Fim da Mágica ---
 
-                // Adiciona primeiro no Firestore para garantir que temos o perfil
-                await addDoc(collection(db, "usuarios_pendentes"), { nome, email, senha, perfil });
-                
-                showNotification("A criação de usuário via painel é um processo complexo. A implementação final recomendada é via Firebase Functions. Por enquanto, a função está desabilitada para evitar conflitos de autenticação no cliente.", "info");
-                e.target.reset();
-                // A lógica abaixo ficaria em uma Cloud Function `onCreate` do documento `usuarios_pendentes`
-                /*
-                // 1. Criar o usuário no Auth
-                const userCredential = await createUserWithEmailAndPassword(auth, email, senha);
-                // 2. Criar o documento no Firestore com o UID correto
-                await setDoc(doc(db, "usuarios", userCredential.user.uid), {
-                    nome, email, perfil, status: 'ativo'
+            showNotification("Processando criação...", "info");
+
+            try {
+                // 1. Criar o usuário no serviço de Autenticação usando a conexão temporária
+                const userCredential = await createUserWithEmailAndPassword(tempAuth, email, senha);
+                const newUser = userCredential.user;
+
+                // 2. Criar o documento do usuário no Firestore usando a conexão principal (db)
+                await setDoc(doc(db, "usuarios", newUser.uid), {
+                    nome: nome,
+                    email: email,
+                    perfil: perfil,
+                    status: 'ativo'
                 });
-                showNotification("Usuário criado com sucesso!", "success");
-                */
+                
+                // 3. Deslogar o usuário recém-criado da conexão temporária (boa prática)
+                await signOut(tempAuth);
+                
+                showNotification(`Usuário "${nome}" criado com sucesso!`, "success");
+                e.target.reset(); // Limpa o formulário
 
             } catch (error) {
                 console.error("Erro ao criar usuário:", error);
-                if(error.code === 'auth/email-already-in-use') {
-                    showNotification("Este email já está em uso.", "error");
+                if (error.code === 'auth/email-already-in-use') {
+                    showNotification("Este email já está cadastrado no sistema.", "error");
+                } else if (error.code === 'auth/weak-password') {
+                    showNotification("A senha precisa ter no mínimo 6 caracteres.", "error");
                 } else {
-                    showNotification("Erro ao criar usuário.", "error");
+                    showNotification("Ocorreu um erro ao criar o usuário.", "error");
                 }
             }
         };
@@ -425,17 +427,12 @@
                 itensCancelados.push(...doc.data().itens);
             });
             
-            // Agora, remove os itens da mesa
             const mesaRef = doc(db, "mesas", String(numeroMesa));
             const mesaDoc = await getDoc(mesaRef);
             if(mesaDoc.exists()){
                 const mesaData = mesaDoc.data();
-                // Lógica complexa de remoção de itens, por simplicidade, vamos remover todos.
-                // Uma implementação mais robusta faria o batimento item a item.
-                const novosItens = []; // Simplificação: remove tudo.
-                const novoTotal = 0; // Simplificação: zera o total.
-
-                batch.update(mesaRef, { itens: novosItens, total: novoTotal });
+                // Simplificação: remove tudo e zera o total.
+                batch.update(mesaRef, { itens: [], total: 0 });
                 showNotification("A mesa foi zerada. Relance os itens que permaneceram.", "info");
             }
 
@@ -502,28 +499,36 @@
                 const colPronto = document.getElementById('col-pronto');
                 if(!colPendente || !colPronto) return;
 
-                colPendente.innerHTML = '';
-                colPronto.innerHTML = '';
+                let hasPending = false;
+                let hasReady = false;
 
                 snapshot.docChanges().forEach(change => {
-                    if (change.type === "added" && change.doc.data().status === 'pendente') {
-                        if (synth) synth.triggerAttackRelease("C5", "0.5");
-                    }
-                });
+                    const pedido = { id: change.doc.id, ...change.doc.data() };
+                    const cardId = `pedido-${pedido.id}`;
 
-                if(snapshot.empty) {
-                    colPendente.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum pedido.</p>`;
-                }
-                
-                snapshot.docs.forEach(doc => {
-                    const pedido = {id: doc.id, ...doc.data()};
-                    if(pedido.status === 'pendente') {
+                    // Remove card from old column if it exists
+                    const existingCard = document.getElementById(cardId);
+                    if (existingCard) existingCard.remove();
+                    
+                    // Add card to new column
+                    if (pedido.status === 'pendente') {
                         colPendente.appendChild(createPedidoCard(pedido));
-                    } else if(pedido.status === 'pronto') {
+                        hasPending = true;
+                    } else if (pedido.status === 'pronto') {
                         colPronto.appendChild(createPedidoCard(pedido));
+                        hasReady = true;
+                    }
+                    
+                    // Sound notification for new pending orders
+                    if (change.type === "added" && pedido.status === 'pendente' && synth) {
+                        synth.triggerAttackRelease("C5", "0.5");
                     }
                 });
                 
+                // Update empty state messages
+                if (!hasPending && colPendente.innerHTML === '') colPendente.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum pedido.</p>`;
+                if (!hasReady && colPronto.innerHTML === '') colPronto.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum pedido.</p>`;
+
                 if (!window.cozinhaTimerInterval) {
                    window.cozinhaTimerInterval = setInterval(updateTimers, 1000);
                 }
@@ -535,7 +540,6 @@
             const card = document.createElement('div');
             card.id = `pedido-${pedido.id}`;
             card.className = 'bg-gray-900 p-3 rounded-lg shadow-lg flex flex-col gap-2 fade-in';
-            const itensHtml = pedido.itens.map(item => `...`).join(''); // Simplificado para economizar espaço
             
             let actionButton;
             if(pedido.status === 'pendente') {
@@ -580,7 +584,6 @@
         };
         
         // --- FUNÇÕES UTILITÁRIAS E NÃO MODIFICADAS (OU POUCO MODIFICADAS) ---
-        // (Inclui showNotification, formatCurrency, setupMesasView, renderPdvScreen, etc.)
         const showNotification = (message, type = 'success', duration = 3000) => {
             const container = document.getElementById('notification-container');
             const el = document.createElement('div');
@@ -600,9 +603,6 @@
             }, duration - 500);
         };
         
-        // As funções abaixo (setupMesasView, renderPdvScreen, etc.) são majoritariamente as mesmas.
-        // Pequenos ajustes foram feitos para se adaptar à nova estrutura de login, mas a lógica central é a mesma.
-        // Colei-as aqui para garantir que o arquivo seja 100% completo.
         const renderCaixaFechadoView = () => { document.getElementById('header-title').textContent = 'Caixa Fechado'; document.getElementById('main-container').innerHTML = `<div class="flex flex-col items-center justify-center h-full text-center p-4"><i class="fas fa-door-closed text-7xl text-gray-500 mb-6"></i><h2 class="text-4xl font-extrabold mb-2">O Caixa está Fechado</h2><p class="text-gray-400 mb-8">Abra o caixa para iniciar as operações do dia.</p><button onclick="abrirModalAberturaCaixa()" class="bg-green-600 text-white font-bold py-4 px-8 rounded-xl text-xl hover:bg-green-700 transition-colors shadow-lg flex items-center gap-3"><i class="fas fa-cash-register"></i> Abrir Caixa</button></div>`; };
         const abrirModalAberturaCaixa = () => { const modal = document.getElementById('abrir-caixa-view'); modal.classList.remove('hidden'); modal.innerHTML = `<div class="bg-gray-800 w-full max-w-sm rounded-2xl shadow-2xl p-6 fade-in"><h3 class="text-xl font-bold mb-4">Abrir Caixa</h3><p class="text-sm text-gray-400 mb-4">Digite o valor inicial do caixa (suprimento).</p><div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">R$</span><input type="number" id="valor-abertura" class="w-full bg-gray-700 text-white p-3 pl-10 rounded-lg text-lg border-0" placeholder="0,00"></div><div class="grid grid-cols-2 gap-3 mt-6"><button onclick="document.getElementById('abrir-caixa-view').classList.add('hidden')" class="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">Cancelar</button><button onclick="abrirCaixa()" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg">Confirmar</button></div></div>`; document.getElementById('valor-abertura').focus(); };
         const abrirCaixa = async () => { const valor = parseFloat(document.getElementById('valor-abertura').value) || 0; await setDoc(doc(db, "configuracao", "caixa"), { status: 'aberto', valorAbertura: valor, abertoEm: serverTimestamp(), abertoPor: { uid: usuarioLogado.uid, nome: usuarioLogado.nome } }); document.getElementById('abrir-caixa-view').classList.add('hidden'); showNotification(`Caixa aberto com ${formatCurrency(valor)}!`); };
@@ -625,7 +625,7 @@
         const formatCurrency = v => v ? v.toLocaleString('pt-BR', { style: 'currency', 'currency': 'BRL' }) : 'R$ 0,00';
 
         // Expondo as funções necessárias globalmente
-        window.handleLogout = handleLogout; window.abrirGestaoUsuariosView = abrirGestaoUsuariosView; window.toggleUserStatus = toggleUserStatus; window.fecharConta = fecharConta; window.cancelarPedidosMesa = cancelarPedidosMesa; window.marcarPedidoPronto = marcarPedidoPronto; window.marcarPedidoEntregue = marcarPedidoEntregue; window.abrirModalAberturaCaixa=abrirModalAberturaCaixa; window.abrirCaixa=abrirCaixa; window.fecharCaixa=fecharCaixa; window.fecharPdvView=fecharPdvView; window.renderPdvScreen=renderPdvScreen; window.enviarPedido=enviarPedido; window.changeQty=changeQty; window.fecharDetalhesItem=fecharDetalhesItem; window.fecharDetalheCaixaView=fecharDetalheCaixaView;
+        window.handleLogout = handleLogout; window.abrirGestaoUsuariosView = abrirGestaoUsuariosView; window.toggleUserStatus = toggleUserStatus; window.fecharConta = fecharConta; window.cancelarPedidosMesa = cancelarPedidosMesa; window.marcarPedidoPronto = marcarPedidoPronto; window.marcarPedidoEntregue = marcarPedidoEntregue; window.abrirModalAberturaCaixa=abrirModalAberturaCaixa; window.abrirCaixa=abrirCaixa; window.fecharCaixa=fecharCaixa; window.fecharPdvView=fecharPdvView; window.renderPdvScreen=renderPdvScreen; window.enviarPedido=enviarPedido; window.changeQty=changeQty; window.fecharDetalhesItem=fecharDetalhesItem; window.fecharDetalheCaixaView=fecharDetalheCaixaView; window.handleCriarUsuario = handleCriarUsuario;
         
         initFirebase();
     </script>
