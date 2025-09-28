@@ -13,53 +13,42 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .fade-in { animation: fadeIn 0.5s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .nav-active { color: #1f2937; background-color: #f59e0b; }
+        .fade-out { animation: fadeOut 0.5s ease-in-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes fadeOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.95); } }
+        .nav-active {
+            color: #1f2937; /* gray-800 */
+            background-color: #f59e0b; /* amber-500 */
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white overflow-hidden h-screen">
 
     <div id="app" class="h-full flex flex-col">
 
-        <div id="login-view" class="flex flex-col items-center justify-center h-full bg-gray-800 p-4">
-            <div class="w-full max-w-sm bg-gray-900 p-8 rounded-2xl shadow-2xl">
-                <div class="text-center mb-8">
-                    <i class="fas fa-utensils text-5xl text-amber-400 mb-4"></i>
-                    <h1 class="text-4xl font-extrabold text-white">Fagulha Grill</h1>
-                    <p class="text-gray-400 mt-2">Acesso ao Sistema</p>
+        <div id="perfil-view" class="flex flex-col items-center justify-center h-full bg-gray-800 p-4 fade-in">
+            <div class="w-full max-w-sm bg-gray-900 p-8 rounded-2xl shadow-2xl text-center">
+                <i class="fas fa-utensils text-5xl text-amber-400 mb-4"></i>
+                <h1 class="text-4xl font-extrabold text-white mb-2">Fagulha Grill</h1>
+                <p class="text-gray-400 mb-8">Selecione seu perfil para iniciar</p>
+                <div class="space-y-4">
+                    <button onclick="selecionarPerfil('caixa')" class="w-full text-lg bg-blue-600 text-white font-bold py-4 px-4 rounded-xl hover:bg-blue-700 transition-all duration-300 shadow-lg flex items-center justify-center gap-3 disabled:opacity-50" disabled><i class="fas fa-cash-register"></i>Caixa</button>
+                    <button id="btn-atendente" onclick="selecionarPerfil('atendente')" class="w-full text-lg bg-green-600 text-white font-bold py-4 px-4 rounded-xl hover:bg-green-700 transition-all duration-300 shadow-lg flex items-center justify-center gap-3 disabled:opacity-50" disabled><i class="fas fa-user-tie"></i>Atendente</button>
+                    <button id="btn-cozinha" onclick="selecionarPerfil('cozinha')" class="w-full text-lg bg-orange-600 text-white font-bold py-4 px-4 rounded-xl hover:bg-orange-700 transition-all duration-300 shadow-lg flex items-center justify-center gap-3 disabled:opacity-50" disabled><i class="fas fa-fire-burner"></i>Cozinha</button>
                 </div>
-                <form id="login-form" class="space-y-4">
-                    <div>
-                        <label for="email" class="text-sm font-bold text-gray-400">Email</label>
-                        <input type="email" id="email" required class="w-full mt-1 bg-gray-700 text-white p-3 rounded-lg border-2 border-transparent focus:border-amber-500 focus:outline-none">
-                    </div>
-                    <div>
-                        <label for="password" class="text-sm font-bold text-gray-400">Senha</label>
-                        <input type="password" id="password" required class="w-full mt-1 bg-gray-700 text-white p-3 rounded-lg border-2 border-transparent focus:border-amber-500 focus:outline-none">
-                    </div>
-                    <button type="submit" class="w-full text-lg bg-amber-600 text-white font-bold py-3 px-4 rounded-xl hover:bg-amber-700 transition-all duration-300 shadow-lg">Entrar</button>
-                </form>
-                <p id="login-status" class="text-center text-red-500 text-sm mt-4 h-5"></p>
+                <p id="connecting-status" class="text-gray-500 text-sm mt-6">Conectando ao sistema...</p>
             </div>
         </div>
 
         <div id="main-view" class="hidden h-full flex flex-col">
             <header class="bg-gray-900/80 backdrop-blur-sm p-4 flex justify-between items-center border-b border-gray-700">
                 <div><h1 class="text-2xl font-bold" id="header-title"></h1></div>
-                <div class="flex items-center gap-4">
-                    <div id="atendente-notificacao" class="relative hidden">
-                        <i class="fas fa-bell text-xl text-amber-400"></i>
-                        <span id="notificacao-count" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center"></span>
-                    </div>
-                    <div class="text-right">
-                        <p id="user-name" class="font-semibold"></p>
-                        <p id="user-profile" class="text-xs text-amber-400 capitalize"></p>
-                    </div>
-                    <div id="header-actions" class="flex items-center gap-3"></div>
-                    <button onclick="logout()" title="Sair do sistema" class="bg-red-600 text-white font-bold h-10 w-10 rounded-lg hover:bg-red-500 transition-colors flex items-center justify-center"><i class="fas fa-sign-out-alt"></i></button>
+                <div id="header-actions" class="flex items-center gap-3">
+                    <button onclick="voltarParaPerfis()" class="bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors"><i class="fas fa-exchange-alt mr-2"></i>Trocar Perfil</button>
                 </div>
             </header>
-            <main class="flex-1 overflow-y-auto" id="main-container"></main>
+            <main class="flex-1 overflow-y-auto" id="main-container">
+            </main>
         </div>
         
         <div id="pdv-view" class="hidden fixed inset-0 bg-gray-900 z-50 flex flex-col"></div>
@@ -67,126 +56,794 @@
         <div id="item-details-view" class="hidden fixed inset-0 bg-gray-900/70 backdrop-blur-sm flex items-center justify-center p-4 z-50"></div>
         <div id="relatorios-view" class="hidden fixed inset-0 bg-gray-900/70 backdrop-blur-sm flex items-center justify-center p-4 z-50"></div>
         <div id="abrir-caixa-view" class="hidden fixed inset-0 bg-gray-900/70 backdrop-blur-sm flex items-center justify-center p-4 z-50"></div>
-        <div id="usuarios-view" class="hidden fixed inset-0 bg-gray-900/70 backdrop-blur-sm flex items-center justify-center p-4 z-50"></div>
         <div id="notification" class="hidden fixed bottom-20 right-5 bg-green-500 text-white py-3 px-5 rounded-lg shadow-xl"><p></p></div>
+
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, collection, setDoc, writeBatch, serverTimestamp, updateDoc, query, where, getDoc, orderBy, limit, getDocs, Timestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, collection, setDoc, writeBatch, serverTimestamp, updateDoc, query, where, getDoc, orderBy, limit, getDocs, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- CÓDIGO COMPLETO ---
-        // (Cole aqui o script completo da resposta anterior, começando de `const firebaseConfig = ...` até o final `initFirebase();`)
-        // A lógica do script agora funcionará, pois ela encontrará o usuário que você criou manualmente.
+        // ATENÇÃO: Verifique se estas chaves são exatamente as mesmas do seu projeto no console do Firebase.
+        const firebaseConfig = {
+            apiKey: "AIzaSyA3rqB_5P8UKl8jTFBTD6L4_jnIPgvTkJA",
+            authDomain: "fagula-grill.firebaseapp.com",
+            projectId: "fagula-grill",
+            storageBucket: "fagula-grill.appspot.com", // Verifique se o domínio está correto (geralmente .appspot.com)
+            messagingSenderId: "537393387141",
+            appId: "1:537393387141:web:1bc57d34575eaa2eb53bec",
+            measurementId: "G-LGJBCZGC4C"
+        };
+        
+        const cardapio = { "Espetos Clássicos": [ { id: 'esp-frango', nome: 'Frango', preco: 10.00 }, { id: 'esp-coracao', nome: 'Coração', preco: 10.00 }, { id: 'esp-linguica', nome: 'Linguiça', preco: 10.00 }, { id: 'esp-paoalho', nome: 'Pão de Alho', preco: 10.00 }, { id: 'esp-santamassa', nome: 'Santa Massa', preco: 10.00 }, { id: 'esp-queijo', nome: 'Queijo Coalho', preco: 12.00 }, { id: 'esp-torresmo-espeto', nome: 'Torresmo', preco: 12.00 }, { id: 'esp-kafta', nome: 'Kafta', preco: 12.00 }, { id: 'esp-alcatra', nome: 'Alcatra', preco: 14.00 } ], "Espetos Premium": [ { id: 'prem-costela', nome: 'Costela', preco: 18.00 }, { id: 'prem-picanha', nome: 'Picanha', preco: 18.00, description: 'Maturatta Friboi' }, { id: 'prem-medalhao-alcatra', nome: 'Medalhão de Alcatra', preco: 18.00 }, { id: 'prem-medalhao-palmito', nome: 'Medalhão de Palmito', preco: 18.00 }, { id: 'prem-kafta-queijo', nome: 'Kafta com Queijo', preco: 16.00 }, { id: 'prem-medalhao-frango', nome: 'Medalhão de Frango', preco: 16.00 }, { id: 'prem-romeujulieta', nome: 'Medalhão Romeu e Julieta', preco: 16.00 }, { id: 'prem-almondega', nome: 'Medalhão de Almôndega', preco: 16.00 }, { id: 'prem-vegetariano', nome: 'Vegetariano', preco: 16.00 }, { id: 'prem-mandioca', nome: 'Medalhão de Mandioca', preco: 16.00, description: 'Com carne seca e queijo' } ], "Entradas": [ { id: 'ent-torresmo', nome: 'Torresmo (Individual)', preco: 24.00, description: 'Barrinha de panceta' }, { id: 'ent-bolinho-costela', nome: 'Bolinho de Costela (3und)', preco: 24.00 }, { id: 'ent-pao-kafta', nome: 'Pão de Alho com Kafta e Queijo', preco: 24.00 }, { id: 'ent-porpetone', nome: 'Porpetone', preco: 26.00, description: 'Bolo de carne artesanal recheado com queijo assado na churrasqueira' }, { id: 'ent-salaminho', nome: 'Salaminho (100g)', preco: 18.00 }, { id: 'ent-frios', nome: 'Pratinho de Frios', preco: 39.00, description: 'Salame, mussarela, ovo de codorna e azeitonas' }, { id: 'ent-paolica', nome: 'Pãoliça (Porção Individual)', preco: 19.00, description: 'Massa de linguiça temperada, queijo mussarela e molho verde no pão francês grelhado' } ], "Acompanhamentos": [ { id: 'acomp-trio', nome: 'Trio', preco: 10.00, description: 'Vinagrete, farofa e molho verde' } ], "Bebidas & Cia": [ { id: 'refri-lata', nome: 'Refrigerante Lata', preco: 5.00 }, { id: 'agua-com-gas', nome: 'Água c/ Gás', preco: 4.00 }, { id: 'agua-sem-gas', nome: 'Água s/ Gás', preco: 3.00 }, { id: 'h2oh', nome: 'H2OH!', preco: 6.00 }, { id: 'suco-lata', nome: 'Suco Lata', preco: 6.00 }, { id: 'energetico', nome: 'Energético', preco: 12.00 }, { id: 'heineken-ln', nome: 'Heineken LN', preco: 10.00 }, { id: 'bud-ln', nome: 'Budweiser LN', preco: 9.00 }, { id: 'stella-ln', nome: 'Stella Artois LN', preco: 9.00 }, { id: 'heineken-600', nome: 'Heineken 600ml', preco: 18.00 }, { id: 'original-600', nome: 'Original 600ml', preco: 15.00 }, { id: 'bud-600', nome: 'Budweiser 600ml', preco: 15.00 }, { id: 'suco-jarra', nome: 'Suco Jarra 1L', preco: 15.00 }, { id: 'dose-campari', nome: 'Dose Campari', preco: 10.00 }, { id: 'dose-gin', nome: 'Dose Gin', preco: 15.00 }, { id: 'dose-redlabel', nome: 'Dose Red Label', preco: 15.00 }, { id: 'dose-oldparr', nome: 'Dose Old Parr', preco: 18.00 }, { id: 'drink-gintonica', nome: 'Gin Tônica', preco: 25.00 }, { id: 'drink-caipirinha', nome: 'Caipirinha', preco: 18.00 } ] };
 
-        // --- PARA SUA FACILIDADE, O SCRIPT COMPLETO E CORRIGIDO ESTÁ ABAIXO ---
-
-        const firebaseConfig = { /* ... (igual ao anterior) ... */ };
-        const cardapio = { /* ... (igual ao anterior) ... */ };
-
-        let app, auth, db, currentUser = null, mesaSelecionada, comandaTemporaria = [], listeners = [], synth;
+        let app, auth, db, perfilAtual, mesaSelecionada, comandaTemporaria = [], listeners = [], synth;
         let caixaStatus = { status: 'fechado' };
         let caixaStatusListener = null;
 
-        const initFirebase = () => {
+        const initFirebase = async () => {
+            const statusEl = document.getElementById('connecting-status');
             try {
                 app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
-                setupAuthObserver();
-                document.getElementById('login-form').addEventListener('submit', handleLogin);
-                document.body.addEventListener('click', () => { if (!synth) synth = new Tone.Synth().toDestination(); }, { once: true });
+
+                onAuthStateChanged(auth, user => {
+                    if (user) {
+                        statusEl.textContent = "Conectado!";
+                        statusEl.classList.remove('text-gray-500', 'text-red-500');
+                        statusEl.classList.add('text-green-500');
+                        document.querySelectorAll('#perfil-view button').forEach(b => b.disabled = false);
+                        listenToCaixaStatus();
+                    }
+                });
+
+                if (!auth.currentUser) {
+                    await signInAnonymously(auth);
+                }
+
+                document.body.addEventListener('click', () => {
+                    if (!synth) synth = new Tone.Synth().toDestination();
+                }, { once: true });
+
             } catch (e) {
                 console.error("Erro de inicialização do Firebase:", e);
-                document.getElementById('login-status').textContent = 'Erro de Configuração.';
+                statusEl.textContent = 'Erro de Configuração.';
+                statusEl.classList.remove('text-gray-500');
+                statusEl.classList.add('text-red-500');
             }
         };
 
-        const setupAuthObserver = () => {
-            onAuthStateChanged(auth, async user => {
-                if (user) {
-                    const userDoc = await getDoc(doc(db, "usuarios", user.uid));
-                    if (userDoc.exists()) {
-                        currentUser = { uid: user.uid, ...userDoc.data() };
-                        if (currentUser.status !== 'ativo') {
-                            showNotification('Seu usuário está inativo.', 'error');
-                            logout();
-                            return;
-                        }
-                        showMainView();
-                    } else {
-                        showNotification('Usuário autenticado, mas sem perfil no banco de dados. Contate o admin.', 'error');
-                        logout();
-                    }
+        const listenToCaixaStatus = () => {
+            if (caixaStatusListener) caixaStatusListener();
+            caixaStatusListener = onSnapshot(doc(db, "configuracao", "caixa"), (doc) => {
+                if (doc.exists()) {
+                    caixaStatus = doc.data();
                 } else {
-                    currentUser = null;
-                    showLoginView();
+                    caixaStatus = { status: 'fechado' };
+                    setDoc(doc(db, "configuracao", "caixa"), caixaStatus);
+                }
+                updateProfileButtons();
+            });
+        };
+
+        const updateProfileButtons = () => {
+            const isAberto = caixaStatus.status === 'aberto';
+            document.getElementById('btn-atendente').classList.toggle('opacity-50', !isAberto);
+            document.getElementById('btn-cozinha').classList.toggle('opacity-50', !isAberto);
+            document.getElementById('btn-atendente').title = isAberto ? '' : 'O caixa está fechado';
+            document.getElementById('btn-cozinha').title = isAberto ? '' : 'O caixa está fechado';
+        };
+        
+        const selecionarPerfil = async (p) => {
+            if ((p === 'atendente' || p === 'cozinha') && caixaStatus.status !== 'aberto') {
+                showNotification('O caixa está fechado. Fale com o gerente para abrir.', 'error');
+                return;
+            }
+
+            perfilAtual = p;
+            document.getElementById('perfil-view').classList.add('hidden');
+            document.getElementById('main-view').classList.remove('hidden');
+            
+            const mainContainer = document.getElementById('main-container');
+            const headerActions = document.getElementById('header-actions');
+            
+            headerActions.innerHTML = `<button onclick="voltarParaPerfis()" class="bg-gray-700 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-600 transition-colors"><i class="fas fa-exchange-alt mr-2"></i>Trocar Perfil</button>`;
+
+            if (p === 'caixa') {
+                if (caixaStatus.status === 'aberto') {
+                    renderCaixaAbertoView();
+                } else {
+                    renderCaixaFechadoView();
+                }
+            } else if (p === 'atendente') {
+                document.getElementById('header-title').textContent = 'Mapa de Mesas';
+                mainContainer.innerHTML = `<div id="mesas-view" class="p-4 sm:p-6"><div id="mesas-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-4"></div></div>`;
+                setupMesasView();
+            } else if (p === 'cozinha') {
+                document.getElementById('header-title').textContent = 'Painel da Cozinha';
+                mainContainer.innerHTML = `<div id="cozinha-view" class="h-full flex flex-col"></div>`;
+                setupCozinhaView();
+            }
+        };
+
+        const renderCaixaFechadoView = () => {
+            document.getElementById('header-title').textContent = 'Caixa Fechado';
+            document.getElementById('main-container').innerHTML = `
+                <div class="flex flex-col items-center justify-center h-full text-center p-4">
+                    <i class="fas fa-door-closed text-7xl text-gray-500 mb-6"></i>
+                    <h2 class="text-4xl font-extrabold mb-2">O Caixa está Fechado</h2>
+                    <p class="text-gray-400 mb-8">Abra o caixa para iniciar as operações do dia.</p>
+                    <button onclick="abrirModalAberturaCaixa()" class="bg-green-600 text-white font-bold py-4 px-8 rounded-xl text-xl hover:bg-green-700 transition-colors shadow-lg flex items-center gap-3">
+                        <i class="fas fa-cash-register"></i> Abrir Caixa
+                    </button>
+                </div>
+            `;
+        };
+
+        const renderCaixaAbertoView = () => {
+            document.getElementById('header-title').textContent = 'Painel do Caixa';
+            const headerActions = document.getElementById('header-actions');
+            
+            const createButton = (id, icon, text, color, onClick) => {
+                const btn = document.createElement('button');
+                btn.id = id;
+                btn.className = `bg-${color}-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-${color}-500 transition-colors flex items-center gap-2`;
+                btn.innerHTML = `<i class="fas ${icon}"></i> ${text}`;
+                btn.onclick = onClick;
+                return btn;
+            };
+
+            const relatoriosBtn = createButton('relatorios-btn', 'fa-chart-line', 'Relatórios', 'indigo', abrirRelatoriosView);
+            const fecharCaixaBtn = createButton('fechar-caixa-btn', 'fa-door-open', 'Fechar Caixa', 'red', fecharCaixa);
+            
+            headerActions.prepend(fecharCaixaBtn);
+            headerActions.prepend(relatoriosBtn);
+
+            document.getElementById('main-container').innerHTML = `<div id="mesas-view" class="p-4 sm:p-6"><div id="mesas-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-4"></div></div>`;
+            setupMesasView();
+        };
+        
+        const abrirModalAberturaCaixa = () => {
+            const modal = document.getElementById('abrir-caixa-view');
+            modal.classList.remove('hidden');
+            modal.innerHTML = `
+                <div class="bg-gray-800 w-full max-w-sm rounded-2xl shadow-2xl p-6 fade-in">
+                    <h3 class="text-xl font-bold mb-4">Abrir Caixa</h3>
+                    <p class="text-sm text-gray-400 mb-4">Digite o valor inicial do caixa para troco (suprimento).</p>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">R$</span>
+                        <input type="number" id="valor-abertura" class="w-full bg-gray-700 text-white p-3 pl-10 rounded-lg text-lg border-0" placeholder="0,00">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 mt-6">
+                        <button onclick="document.getElementById('abrir-caixa-view').classList.add('hidden')" class="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">Cancelar</button>
+                        <button onclick="abrirCaixa()" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg">Confirmar Abertura</button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('valor-abertura').focus();
+        };
+
+        const abrirCaixa = async () => {
+            const valorInput = document.getElementById('valor-abertura');
+            const valorAbertura = parseFloat(valorInput.value) || 0;
+
+            const novoStatus = {
+                status: 'aberto',
+                valorAbertura: valorAbertura,
+                abertoEm: serverTimestamp(),
+                abertoPor: auth.currentUser.uid
+            };
+            await setDoc(doc(db, "configuracao", "caixa"), novoStatus);
+            document.getElementById('abrir-caixa-view').classList.add('hidden');
+            showNotification(`Caixa aberto com ${formatCurrency(valorAbertura)}!`);
+            selecionarPerfil('caixa'); // Atualiza a view do caixa
+        };
+
+        const fecharCaixa = async () => {
+            if (confirm("Tem certeza que deseja fechar o caixa? Esta ação encerrará o expediente.")) {
+                const docRef = doc(db, "configuracao", "caixa");
+                const caixaDoc = await getDoc(docRef);
+
+                if (caixaDoc.exists()) {
+                    const dadosCaixa = caixaDoc.data();
+                    const novoStatus = {
+                        ...dadosCaixa,
+                        status: 'fechado',
+                        fechadoEm: serverTimestamp(),
+                        fechadoPor: auth.currentUser.uid
+                    };
+                    await setDoc(docRef, novoStatus);
+                    showNotification('Caixa fechado com sucesso!');
+                    selecionarPerfil('caixa'); // Atualiza a view do caixa
+                }
+            }
+        };
+
+        const voltarParaPerfis = () => {
+            perfilAtual = null;
+            document.getElementById('perfil-view').classList.remove('hidden');
+            document.getElementById('main-view').classList.add('hidden');
+            listeners.forEach(unsub => unsub()); listeners = [];
+            const timerInterval = window.cozinhaTimerInterval;
+            if (timerInterval) clearInterval(timerInterval);
+            fecharPdvView(); fecharDetalheCaixaView();
+        };
+
+        const setupMesasView = () => {
+            const grid = document.getElementById('mesas-grid'); 
+            if(!grid) return;
+            grid.innerHTML = '';
+            for (let i = 1; i <= 50; i++) {
+                const mesaEl = document.createElement('div'); mesaEl.id = `mesa-${i}`;
+                mesaEl.className = 'p-2 rounded-lg text-center cursor-pointer transition-all duration-300';
+                mesaEl.innerHTML = `<div class="font-extrabold text-3xl">${i}</div><div class="text-xs font-semibold"></div>`;
+                grid.appendChild(mesaEl);
+            }
+            const unsub = onSnapshot(collection(db, "mesas"), snapshot => {
+                let mesasAtivas = new Set();
+                snapshot.forEach(doc => { updateMesaCard(doc.id, doc.data()); mesasAtivas.add(doc.id); });
+                for (let i = 1; i <= 50; i++) if (!mesasAtivas.has(String(i))) updateMesaCard(i, { status: 'livre' });
+            });
+            listeners.push(unsub);
+        };
+
+        const updateMesaCard = (numero, data) => {
+            const mesaEl = document.getElementById(`mesa-${numero}`); if (!mesaEl) return;
+            const status = data.status || 'livre'; 
+            const total = data.total || 0;
+            const nomeCliente = data.cliente || '';
+            mesaEl.className = 'p-2 rounded-lg text-center cursor-pointer transition-all duration-300'; // Reset classes
+            if (status === 'livre') {
+                mesaEl.classList.add('bg-green-600', 'hover:bg-green-500'); 
+                mesaEl.children[1].textContent = 'Livre';
+            } else {
+                mesaEl.classList.add('bg-red-600', 'hover:bg-red-500');
+                mesaEl.children[1].innerHTML = `${nomeCliente ? `<span class='block text-xs truncate font-normal'>${nomeCliente}</span>` : ''}<span class="font-bold">${formatCurrency(total)}</span>`;
+            }
+            mesaEl.onclick = () => handleMesaClick(numero, data);
+        };
+
+        const handleMesaClick = async (numero, data) => {
+            if (perfilAtual === 'atendente') {
+                abrirPdvView(numero);
+            } else if (perfilAtual === 'caixa' && data.status === 'ocupada') {
+                mesaSelecionada = { numero, ...data };
+                abrirDetalheCaixaView();
+            } else if (perfilAtual === 'caixa' && data.status !== 'ocupada') {
+                showNotification('Esta mesa está livre.', 'info');
+            }
+        };
+
+        const abrirPdvView = async (numero) => {
+            const mesaDoc = await getDoc(doc(db, "mesas", String(numero)));
+            mesaSelecionada = { numero, ...mesaDoc.data() };
+            comandaTemporaria = mesaSelecionada.itens ? JSON.parse(JSON.stringify(mesaSelecionada.itens)) : [];
+            document.getElementById('pdv-view').classList.remove('hidden');
+            renderPdvScreen('adicionar'); 
+        };
+
+        const fecharPdvView = () => {
+            const el = document.getElementById('pdv-view');
+            const modal = el.querySelector('.fade-in');
+            if(modal) {
+                modal.classList.add('fade-out');
+                setTimeout(() => {
+                    el.innerHTML = '';
+                    el.classList.add('hidden');
+                }, 400);
+            } else {
+                el.innerHTML = '';
+                el.classList.add('hidden');
+            }
+        };
+        
+        const renderPdvScreen = (screen) => {
+            const container = document.getElementById('pdv-view');
+            const totalItens = comandaTemporaria.reduce((acc, item) => acc + item.quantidade, 0);
+
+            const screenHtml = `
+            <div class="bg-gray-800 w-full h-full flex flex-col fade-in">
+                <header class="p-4 border-b border-gray-700 flex justify-between items-center flex-shrink-0 bg-gray-800">
+                    <h2 class="text-2xl font-bold">Mesa ${mesaSelecionada.numero}</h2>
+                </header>
+                <main class="flex-1 overflow-y-auto bg-gray-900">
+                </main>
+                <footer class="flex-shrink-0 bg-gray-800 border-t border-gray-700 grid grid-cols-3 text-center text-gray-400">
+                    <button onclick="renderPdvScreen('conta')" class="p-4 relative ${screen === 'conta' ? 'nav-active' : 'hover:bg-gray-700'}">
+                        <i class="fas fa-receipt text-2xl"></i>
+                        <span class="text-xs block mt-1">Ver Conta</span>
+                        ${totalItens > 0 ? `<span class="absolute top-2 right-6 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">${totalItens}</span>` : ''}
+                    </button>
+                    <button onclick="renderPdvScreen('adicionar')" class="p-4 ${screen === 'adicionar' ? 'nav-active' : 'hover:bg-gray-700'}"><i class="fas fa-plus text-2xl"></i><span class="text-xs block mt-1">Adicionar Itens</span></button>
+                    <button onclick="fecharPdvView()" class="p-4 hover:bg-gray-700"><i class="fas fa-table-cells text-2xl"></i><span class="text-xs block mt-1">Mesas</span></button>
+                </footer>
+            </div>
+            `;
+            container.innerHTML = screenHtml;
+
+            const mainContainer = container.querySelector('main');
+            if (screen === 'adicionar') {
+                mainContainer.innerHTML = `
+                    <div class="p-3 border-b border-gray-700 flex-shrink-0 bg-gray-800 sticky top-0 z-10"><div id="categorias-container" class="flex items-center gap-2 overflow-x-auto no-scrollbar"></div></div>
+                    <div id="produtos-container" class="p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
+                `;
+                renderCategorias(); 
+                renderProdutos(Object.keys(cardapio)[0]);
+            } else if (screen === 'conta') {
+                mainContainer.innerHTML = `
+                    <div class="p-4 flex flex-col h-full">
+                        <div class="mb-4">
+                            <label for="cliente-nome" class="text-sm text-gray-400">Nome do Cliente (Opcional)</label>
+                            <input type="text" id="cliente-nome" value="${mesaSelecionada.cliente || ''}" class="w-full bg-gray-700 text-white p-2 rounded-lg mt-1 border-0" placeholder="Digite o nome aqui...">
+                        </div>
+                        <h3 class="text-xl font-semibold mb-4 flex-shrink-0">Comanda da Mesa</h3>
+                        <div id="comanda-itens" class="flex-1 space-y-2 overflow-y-auto no-scrollbar pr-2 mb-4"></div>
+                        <div class="border-t border-gray-700 pt-4 flex-shrink-0">
+                            <div class="flex justify-between items-center text-2xl font-bold mb-4"><span>Total</span><span id="comanda-total">R$ 0,00</span></div>
+                            <button onclick="enviarPedido()" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition-colors shadow-lg flex items-center justify-center gap-2"><i class="fas fa-paper-plane"></i> Salvar & Enviar para Cozinha</button>
+                        </div>
+                    </div>
+                `;
+                renderComanda();
+            }
+        };
+
+        const renderCategorias = () => {
+            const container = document.getElementById('categorias-container');
+            if (!container) return;
+            container.innerHTML = '';
+            Object.keys(cardapio).forEach((categoria, index) => {
+                const button = document.createElement('button');
+                button.textContent = categoria;
+                button.className = `py-2 px-4 rounded-full font-semibold transition-colors text-sm whitespace-nowrap ${index === 0 ? 'bg-amber-500 text-white' : 'bg-gray-700 hover:bg-gray-600'}`;
+                button.onclick = () => {
+                    renderProdutos(categoria);
+                    container.querySelectorAll('button').forEach(btn => {
+                        btn.classList.remove('bg-amber-500', 'text-white');
+                        btn.classList.add('bg-gray-700');
+                    });
+                    button.classList.add('bg-amber-500', 'text-white');
+                    button.classList.remove('bg-gray-700');
+                };
+                container.appendChild(button);
+            });
+        };
+        
+        const renderProdutos = (categoria) => {
+            const container = document.getElementById('produtos-container');
+            if (!container) return;
+            container.innerHTML = '';
+            cardapio[categoria].forEach(item => {
+                const card = document.createElement('div');
+                card.className = "bg-gray-700 p-3 rounded-lg shadow hover:bg-gray-600 text-left transition-all duration-200 transform hover:scale-105 cursor-pointer flex flex-col justify-between";
+                card.innerHTML = `<div><p class="font-semibold text-white">${item.nome}</p></div><p class="text-lg text-amber-400 font-bold mt-2">${formatCurrency(item.preco)}</p>`;
+                card.onclick = () => abrirDetalhesItem(item);
+                container.appendChild(card);
+            });
+        };
+        
+        const abrirDetalhesItem = (item) => {
+            const container = document.getElementById('item-details-view');
+            container.classList.remove('hidden');
+            container.innerHTML = `
+                <div class="bg-gray-800 w-full max-w-sm rounded-2xl shadow-2xl flex flex-col fade-in">
+                    <header class="p-4 border-b border-gray-700">
+                        <h3 class="text-xl font-bold">${item.nome}</h3>
+                        ${item.description ? `<p class="text-sm text-gray-400 mt-1">${item.description}</p>` : ''}
+                    </header>
+                    <div class="p-4 space-y-4">
+                        <div class="flex items-center justify-center gap-4">
+                            <button id="details-qty-minus" class="bg-gray-600 w-10 h-10 rounded-full font-bold text-xl flex items-center justify-center">-</button>
+                            <span id="details-qty" class="font-bold text-2xl w-10 text-center">1</span>
+                            <button id="details-qty-plus" class="bg-gray-600 w-10 h-10 rounded-full font-bold text-xl flex items-center justify-center">+</button>
+                        </div>
+                        <div>
+                            <label for="details-obs" class="text-sm text-gray-400">Observações</label>
+                            <textarea id="details-obs" class="w-full bg-gray-700 text-white p-2 rounded-lg mt-1 h-20 border-0" placeholder="Ex: Sem cebola, ponto da carne..."></textarea>
+                        </div>
+                    </div>
+                    <footer class="p-4 border-t border-gray-700 grid grid-cols-2 gap-3">
+                        <button onclick="fecharDetalhesItem()" class="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">Cancelar</button>
+                        <button id="details-confirm" class="bg-amber-600 text-white font-bold py-2 px-4 rounded-lg">Confirmar</button>
+                    </footer>
+                </div>
+            `;
+            let quantidade = 1;
+            const qtyEl = container.querySelector('#details-qty');
+            container.querySelector('#details-qty-minus').onclick = () => {
+                if(quantidade > 1) {
+                    quantidade--;
+                    qtyEl.textContent = quantidade;
+                }
+            };
+            container.querySelector('#details-qty-plus').onclick = () => {
+                quantidade++;
+                qtyEl.textContent = quantidade;
+            };
+            container.querySelector('#details-confirm').onclick = () => {
+                const observacao = container.querySelector('#details-obs').value.trim();
+                const itemExistente = comandaTemporaria.find(i => i.id === item.id && i.observacao === observacao);
+                if (itemExistente) {
+                    itemExistente.quantidade += quantidade;
+                } else {
+                    comandaTemporaria.push({ ...item, quantidade, observacao });
+                }
+                showNotification(`${quantidade}x ${item.nome} adicionado!`);
+                fecharDetalhesItem();
+                renderPdvScreen('conta');
+            };
+        };
+
+        const fecharDetalhesItem = () => document.getElementById('item-details-view').classList.add('hidden');
+        
+        const renderComanda = () => {
+            const container = document.getElementById('comanda-itens');
+            const totalEl = document.getElementById('comanda-total');
+            if(!container || !totalEl) return;
+            let total = 0;
+            if(comandaTemporaria.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-500 mt-10">Nenhum item adicionado.</p>';
+                totalEl.textContent = formatCurrency(0); return;
+            }
+            container.innerHTML = '';
+            comandaTemporaria.forEach((item, index) => {
+                total += item.preco * item.quantidade;
+                const itemDiv = document.createElement('div');
+                itemDiv.className = "flex justify-between items-center bg-gray-700/50 p-2 rounded flex-wrap";
+                itemDiv.innerHTML = `
+                    <div class="flex-grow">
+                        <p class="font-medium">${item.nome}</p>
+                        <p class="text-xs text-gray-400">${formatCurrency(item.preco)}</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button class="bg-gray-600 w-6 h-6 rounded-full font-bold flex items-center justify-center" onclick="changeQty(${index}, -1)">-</button>
+                        <span class="font-bold w-4 text-center">${item.quantidade}</span>
+                        <button class="bg-gray-600 w-6 h-6 rounded-full font-bold flex items-center justify-center" onclick="changeQty(${index}, 1)">+</button>
+                    </div>
+                    ${item.observacao ? `<p class="w-full text-xs text-amber-400 italic mt-1">Obs: ${item.observacao}</p>` : ''}
+                `;
+                container.appendChild(itemDiv);
+            });
+            totalEl.textContent = formatCurrency(total);
+        };
+        
+        const changeQty = (itemIndex, amount) => {
+            if(comandaTemporaria[itemIndex]) {
+                comandaTemporaria[itemIndex].quantidade += amount;
+                if (comandaTemporaria[itemIndex].quantidade <= 0) comandaTemporaria.splice(itemIndex, 1);
+            }
+            renderComanda();
+        };
+
+        const enviarPedido = async () => {
+            const nomeClienteInput = document.getElementById('cliente-nome');
+            const nomeCliente = nomeClienteInput ? nomeClienteInput.value.trim() : (mesaSelecionada.cliente || '');
+            
+            const itensOriginais = mesaSelecionada.itens || [];
+            const itensEnviados = comandaTemporaria.filter(item => {
+                const itemOriginal = itensOriginais.find(i => i.id === item.id && i.observacao === item.observacao);
+                return !itemOriginal || item.quantidade > itemOriginal.quantidade;
+            }).map(item => {
+                const itemOriginal = itensOriginais.find(i => i.id === item.id && i.observacao === item.observacao);
+                return { ...item, quantidade: itemOriginal ? item.quantidade - itemOriginal.quantidade : item.quantidade };
+            }).filter(item => item.quantidade > 0);
+
+            if (itensEnviados.length === 0 && nomeCliente === (mesaSelecionada.cliente || '')) { 
+                showNotification('Nenhuma alteração para enviar.', 'info'); return; 
+            }
+            try {
+                const batch = writeBatch(db);
+                if(itensEnviados.length > 0) {
+                    const pedidoCozinhaRef = doc(collection(db, "pedidos_cozinha"));
+                    batch.set(pedidoCozinhaRef, { mesa: mesaSelecionada.numero, cliente: nomeCliente, itens: itensEnviados, status: 'pendente', criadoEm: serverTimestamp() });
+                }
+                const mesaRef = doc(db, "mesas", String(mesaSelecionada.numero));
+                const novoTotal = comandaTemporaria.reduce((acc, item) => acc + (item.preco * item.quantidade), 0);
+                batch.set(mesaRef, { status: 'ocupada', total: novoTotal, itens: comandaTemporaria, cliente: nomeCliente, abertaEm: mesaSelecionada.abertaEm || serverTimestamp() }, { merge: true });
+                await batch.commit();
+                showNotification(`Mesa ${mesaSelecionada.numero} atualizada!`);
+                fecharPdvView();
+            } catch(e) {
+                console.error("Erro ao enviar pedido: ", e);
+                showNotification('Erro ao conectar com o servidor. Verifique sua conexão e as regras do Firebase.', 'error');
+            }
+        };
+
+        const setupCozinhaView = () => {
+            const container = document.getElementById('cozinha-view');
+            if(!container) return;
+            container.innerHTML = `
+                <div class="p-4 border-b border-gray-700 flex-shrink-0">
+                    <div class="flex items-center gap-4" id="cozinha-tabs">
+                        <button onclick="renderCozinhaScreen('pendente')" class="py-2 px-4 rounded-full font-semibold">A Fazer</button>
+                        <button onclick="renderCozinhaScreen('historico')" class="py-2 px-4 rounded-full font-semibold">Histórico</button>
+                    </div>
+                </div>
+                <div id="cozinha-screen-container" class="flex-1 p-4 overflow-y-auto"></div>
+            `;
+            renderCozinhaScreen('pendente');
+        };
+
+        const renderCozinhaScreen = async (status) => {
+            listeners.forEach(unsub => unsub()); listeners = [];
+            if (window.cozinhaTimerInterval) clearInterval(window.cozinhaTimerInterval);
+
+            document.querySelectorAll('#cozinha-tabs button').forEach(btn => {
+                btn.classList.remove('nav-active', 'bg-gray-700');
+                if(btn.onclick.toString().includes(status)) {
+                    btn.classList.add('nav-active');
+                } else {
+                    btn.classList.add('bg-gray-700');
+                }
+            });
+            
+            const container = document.getElementById('cozinha-screen-container');
+            if (status === 'historico') {
+                container.innerHTML = `<div id="historico-list" class="w-full space-y-2">Carregando histórico...</div>`;
+                loadHistorico();
+                return;
+            }
+            
+            container.innerHTML = `<div id="col-pendente" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4"></div>`;
+            const q = query(collection(db, "pedidos_cozinha"), where("status", "==", "pendente"), orderBy("criadoEm"));
+            const unsub = onSnapshot(q, (snapshot) => {
+                const grid = document.getElementById('col-pendente');
+                if (!grid) return;
+                
+                snapshot.docChanges().forEach(change => {
+                    if (change.type === "added" && synth) synth.triggerAttackRelease("C5", "0.5");
+                    if (change.type === "removed") {
+                        const card = document.getElementById(`pedido-${change.doc.id}`);
+                        if(card) card.remove();
+                    }
+                    if (change.type === "added" || change.type === "modified") {
+                        renderPedidoCard(change.doc.id, change.doc.data());
+                    }
+                });
+
+                if (snapshot.empty) {
+                     grid.innerHTML = `<p class="text-gray-400 col-span-full text-center mt-10">Nenhum pedido pendente.</p>`;
+                }
+                
+                updateTimers();
+                if (!window.cozinhaTimerInterval) {
+                   window.cozinhaTimerInterval = setInterval(updateTimers, 1000);
+                }
+            });
+            listeners.push(unsub);
+        };
+        
+        const renderPedidoCard = (id, pedido) => {
+            const grid = document.getElementById('col-pendente');
+            if (!grid) return;
+            
+            let card = document.getElementById(`pedido-${id}`);
+            if (!card) {
+                card = document.createElement('div');
+                card.id = `pedido-${id}`;
+                card.className = 'bg-gray-800 p-4 rounded-lg shadow-lg flex flex-col gap-3 fade-in';
+                grid.appendChild(card);
+            }
+
+            const itensHtml = pedido.itens.map(item => `<li class="flex justify-between items-start text-lg flex-wrap"><span class="font-bold text-gray-400 mr-2">${item.quantidade}x</span><span class="flex-1 text-right">${item.nome}</span>${item.observacao ? `<span class="w-full text-right text-xs text-amber-400 italic">- ${item.observacao}</span>` : ''}</li>`).join('');
+            
+            card.innerHTML = `
+                <div class="flex justify-between items-center pb-2 border-b border-gray-700">
+                    <h3 class="text-2xl font-extrabold text-amber-400">Mesa ${pedido.mesa}</h3>
+                    <span class="text-sm font-bold" data-timestamp="${pedido.criadoEm?.seconds}">00:00</span>
+                </div>
+                ${pedido.cliente ? `<p class="text-sm">Cliente: <span class="font-semibold">${pedido.cliente}</span></p>` : ''}
+                <ul class="space-y-1 flex-grow">${itensHtml}</ul>
+                <button onclick="marcarPedidoPronto('${id}')" class="w-full mt-2 bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition-colors">Marcar como Pronto</button>
+            `;
+        };
+
+        const updateTimers = () => {
+            document.querySelectorAll('[data-timestamp]').forEach(el => {
+                const timestamp = parseInt(el.dataset.timestamp, 10);
+                if (!timestamp) return;
+                const now = Math.floor(Date.now() / 1000);
+                const diff = now - timestamp;
+                const minutes = Math.floor(diff / 60);
+                const seconds = diff % 60;
+                
+                el.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                
+                el.classList.remove('text-green-400', 'text-yellow-400', 'text-red-500');
+                if (minutes >= 15) { // Alerta em 15 min
+                    el.classList.add('text-red-500');
+                } else if (minutes >= 8) { // Atenção em 8 min
+                    el.classList.add('text-yellow-400');
+                } else {
+                    el.classList.add('text-green-400');
                 }
             });
         };
 
-        const handleLogin = async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const statusEl = document.getElementById('login-status');
-            statusEl.textContent = 'Autenticando...';
+        const marcarPedidoPronto = async id => {
             try {
-                await signInWithEmailAndPassword(auth, email, password);
-                statusEl.textContent = '';
-            } catch (error) {
-                statusEl.textContent = 'Email ou senha inválidos.';
-                console.error("Erro de Login:", error);
+                await updateDoc(doc(db, "pedidos_cozinha", id), { 
+                    status: 'pronto',
+                    finalizadoEm: serverTimestamp() 
+                });
+                showNotification(`Pedido finalizado!`);
+            } catch(e) {
+                console.error("Erro ao marcar pedido como pronto: ", e);
+                showNotification('Erro de comunicação com o servidor.', 'error');
             }
         };
+        
+        const loadHistorico = async () => {
+             const container = document.getElementById('historico-list');
+             if (!caixaStatus.abertoEm) {
+                container.innerHTML = '<p class="text-gray-500 text-center">O caixa está fechado. Abra-o para ver o histórico do turno.</p>';
+                return;
+             }
+             const q = query(collection(db, "pedidos_cozinha"), where("status", "==", "pronto"), where("finalizadoEm", ">=", caixaStatus.abertoEm), orderBy("finalizadoEm", "desc"));
+             const querySnapshot = await getDocs(q);
+             if (container) {
+                container.innerHTML = querySnapshot.empty ? '<p class="text-gray-500 text-center">Nenhum pedido finalizado neste turno.</p>' : '';
+                querySnapshot.forEach(doc => {
+                    const pedido = doc.data();
+                    const card = document.createElement('div');
+                    card.className = 'bg-gray-800 p-3 rounded-lg text-sm';
+                    const itens = pedido.itens.map(i => `${i.quantidade}x ${i.nome}`).join(', ');
+                    const dataFinalizado = pedido.finalizadoEm ? new Date(pedido.finalizadoEm.toDate()).toLocaleTimeString('pt-BR') : 'sem data';
+                    card.innerHTML = `<p class="font-bold">Mesa ${pedido.mesa} <span class="font-normal text-gray-400">- ${dataFinalizado}</span></p><p class="text-gray-300">${itens}</p>`;
+                    container.appendChild(card);
+                });
+             }
+        };
+        
+        const abrirDetalheCaixaView = () => {
+            const modal = document.getElementById('caixa-detalhe-view');
+            modal.innerHTML = `
+             <div class="bg-gray-800 w-full max-w-md h-auto max-h-[80vh] rounded-2xl shadow-2xl flex flex-col fade-in">
+                <header class="p-4 border-b border-gray-700 flex justify-between items-center"><h2 class="text-2xl font-bold">Detalhes - Mesa ${mesaSelecionada.numero}</h2><button onclick="fecharDetalheCaixaView()" class="text-gray-400 hover:text-white"><i class="fas fa-times text-2xl"></i></button></header>
+                <div class="p-6 overflow-y-auto no-scrollbar">
+                    ${mesaSelecionada.cliente ? `<p class="text-lg mb-4">Cliente: <span class="font-bold text-amber-400">${mesaSelecionada.cliente}</span></p>`: ''}
+                    <ul id="caixa-itens-lista" class="space-y-3 mb-6"></ul>
+                    <div class="border-t border-gray-700 pt-4">
+                        <div class="flex justify-between items-center text-3xl font-extrabold mb-6"><span>Total</span><span id="caixa-total-mesa">${formatCurrency(mesaSelecionada.total || 0)}</span></div>
+                        <button onclick="fecharConta()" class="w-full bg-blue-600 text-white font-bold py-4 px-4 rounded-lg hover:bg-blue-700 transition-colors shadow-lg text-lg flex items-center justify-center gap-2"><i class="fas fa-receipt"></i> Fechar Conta</button>
+                    </div>
+                </div>
+             </div>`;
+            const listaItens = modal.querySelector('#caixa-itens-lista');
+            if (mesaSelecionada.itens?.length > 0) {
+                 mesaSelecionada.itens.forEach(item => {
+                    const li = document.createElement('li'); li.className = "flex justify-between items-start text-lg flex-wrap";
+                    li.innerHTML = `<span class="mr-2">${item.quantidade}x ${item.nome}</span><span class="font-semibold ml-auto">${formatCurrency(item.preco * item.quantidade)}</span>${item.observacao ? `<span class="w-full text-left text-xs text-amber-400 italic block">Obs: ${item.observacao}</span>` : ''}`;
+                    listaItens.appendChild(li);
+                });
+            } else { listaItens.innerHTML = `<p class="text-gray-400">Nenhum item lançado.</p>`; }
+            modal.classList.remove('hidden');
+        };
+        const fecharDetalheCaixaView = () => document.getElementById('caixa-detalhe-view').classList.add('hidden');
 
-        const logout = () => { /* ... (código idêntico ao anterior) ... */ };
-        const showLoginView = () => { /* ... (código idêntico ao anterior) ... */ };
-        const showMainView = () => { /* ... (código idêntico ao anterior) ... */ };
-        const loadProfileView = () => { /* ... (código idêntico ao anterior) ... */ };
-        const setupHeader = () => { /* ... (código idêntico ao anterior) ... */ };
-        const listenToCaixaStatus = () => { /* ... (código idêntico ao anterior) ... */ };
-        const renderCaixaFechadoView = () => { /* ... (código idêntico ao anterior) ... */ };
-        const renderCaixaAbertoView = () => { /* ... (código idêntico ao anterior) ... */ };
-        const renderAtendenteView = () => { /* ... (código idêntico ao anterior) ... */ };
-        const renderCozinhaView = () => { /* ... (código idêntico ao anterior) ... */ };
-        const abrirUsuariosView = () => { /* ... (código idêntico ao anterior) ... */ };
-        const loadUserList = () => { /* ... (código idêntico ao anterior) ... */ };
-        const handleAddUser = async (e) => { /* ... (código idêntico ao anterior) ... */ };
-        const fecharUsuariosView = () => { /* ... (código idêntico ao anterior) ... */ };
-        const abrirModalAberturaCaixa = () => { /* ... (código idêntico ao anterior) ... */ };
-        const abrirCaixa = async () => { /* ... (código idêntico ao anterior) ... */ };
-        const fecharCaixa = async () => { /* ... (código idêntico ao anterior) ... */ };
-        const setupMesasView = () => { /* ... (código idêntico ao anterior) ... */ };
-        const updateMesaCard = (numero, data) => { /* ... (código idêntico ao anterior) ... */ };
-        const handleMesaClick = async (numero, data) => { /* ... (código idêntico ao anterior) ... */ };
-        const abrirPdvView = async (numero) => { /* ... (código idêntico ao anterior) ... */ };
-        const fecharPdvView = () => { /* ... (código idêntico ao anterior) ... */ };
-        const renderPdvScreen = (screen) => { /* ... (código idêntico ao anterior) ... */ };
-        const renderCategorias = () => { /* ... (código idêntico ao anterior) ... */ };
-        const renderProdutos = (categoria) => { /* ... (código idêntico ao anterior) ... */ };
-        const abrirDetalheItem = (item) => { /* ... (código idêntico ao anterior) ... */ };
-        const fecharDetalheItem = () => { /* ... (código idêntico ao anterior) ... */ };
-        const renderComanda = () => { /* ... (código idêntico ao anterior) ... */ };
-        const changeQty = (itemIndex, amount) => { /* ... (código idêntico ao anterior) ... */ };
-        const enviarPedido = async () => { /* ... (código idêntico ao anterior) ... */ };
-        const setupCozinhaView = () => { /* ... (código idêntico ao anterior) ... */ };
-        const renderPedidoCard = (container, id, pedido) => { /* ... (código idêntico ao anterior) ... */ };
-        const marcarPedidoPronto = (id) => { /* ... (código idêntico ao anterior) ... */ };
-        const marcarPedidoEntregue = (id) => { /* ... (código idêntico ao anterior) ... */ };
-        const setupAtendenteNotifications = () => { /* ... (código idêntico ao anterior) ... */ };
-        const abrirDetalheCaixaView = async () => { /* ... (código idêntico ao anterior) ... */ };
-        const fecharDetalheCaixaView = () => { /* ... (código idêntico ao anterior) ... */ };
-        const fecharConta = async () => { /* ... (código idêntico ao anterior) ... */ };
-        const abrirRelatoriosView = async () => { /* ... (código idêntico ao anterior) ... */ };
-        const fecharRelatoriosView = () => { /* ... (código idêntico ao anterior) ... */ };
-        const updateTimers = () => { /* ... (código idêntico ao anterior) ... */ };
-        const showNotification = (message, type = 'success') => { /* ... (código idêntico ao anterior) ... */ };
-        const formatCurrency = v => { /* ... (código idêntico ao anterior) ... */ };
+        const fecharConta = async () => {
+            if (!mesaSelecionada || !mesaSelecionada.itens || mesaSelecionada.itens.length === 0) {
+                showNotification('A mesa está vazia, não é possível fechar.', 'error');
+                return;
+            }
 
-        // Atribuição de todas as funções ao window
-        Object.assign(window, { logout, abrirUsuariosView, fecharUsuariosView, abrirModalAberturaCaixa, abrirCaixa, fecharCaixa, handleMesaClick, abrirPdvView, fecharPdvView, renderPdvScreen, abrirDetalheItem, fecharDetalheItem, renderComanda, changeQty, enviarPedido, marcarPedidoPronto, marcarPedidoEntregue, abrirDetalheCaixaView, fecharDetalheCaixaView, fecharConta, abrirRelatoriosView, fecharRelatoriosView });
+            try {
+                const batch = writeBatch(db);
+                const vendaRef = doc(collection(db, "vendas_finalizadas"));
+                batch.set(vendaRef, {
+                    mesa: mesaSelecionada.numero,
+                    cliente: mesaSelecionada.cliente || '',
+                    itens: mesaSelecionada.itens,
+                    total: mesaSelecionada.total,
+                    abertaEm: mesaSelecionada.abertaEm,
+                    finalizadaEm: serverTimestamp()
+                });
+                const mesaRef = doc(db, "mesas", String(mesaSelecionada.numero));
+                batch.delete(mesaRef); // Deleta o documento da mesa para que ela volte ao estado "Livre"
+
+                await batch.commit();
+                showNotification(`Mesa ${mesaSelecionada.numero} fechada com sucesso!`);
+                fecharDetalheCaixaView();
+            } catch(e) {
+                console.error("Erro ao fechar conta:", e);
+                showNotification('Erro ao conectar com o servidor para fechar a conta.', 'error');
+            }
+        };
+        
+        const abrirRelatoriosView = async () => {
+            const modal = document.getElementById('relatorios-view');
+            modal.innerHTML = `<div id="relatorios-container" class="bg-gray-800 w-full max-w-2xl h-auto max-h-[80vh] rounded-2xl shadow-2xl flex flex-col fade-in"><div class="p-6 text-center"><i class="fas fa-spinner fa-spin text-3xl"></i><p class="mt-2">Carregando dados...</p></div></div>`;
+            modal.classList.remove('hidden');
+
+            if (!caixaStatus.abertoEm) {
+                const container = modal.querySelector('#relatorios-container');
+                container.innerHTML = `<header class="p-4 border-b border-gray-700 flex justify-between items-center"><h2 class="text-2xl font-bold">Relatório do Turno</h2><button onclick="fecharRelatoriosView()" class="text-gray-400 hover:text-white"><i class="fas fa-times text-2xl"></i></button></header><div class="p-6 text-center text-gray-400">O caixa está fechado. Abra o caixa para visualizar os relatórios do turno.</div>`;
+                return;
+            }
+
+            const q = query(collection(db, "vendas_finalizadas"), where("finalizadaEm", ">=", caixaStatus.abertoEm));
+            const querySnapshot = await getDocs(q);
+
+            let faturamentoTotal = 0;
+            const vendas = [];
+            const contagemProdutos = {};
+
+            querySnapshot.forEach(doc => {
+                const venda = doc.data();
+                vendas.push(venda);
+                faturamentoTotal += venda.total;
+                venda.itens.forEach(item => {
+                    contagemProdutos[item.nome] = (contagemProdutos[item.nome] || 0) + item.quantidade;
+                });
+            });
+
+            const numeroVendas = vendas.length;
+            const ticketMedio = numeroVendas > 0 ? faturamentoTotal / numeroVendas : 0;
+            const produtosMaisVendidos = Object.entries(contagemProdutos).sort(([,a],[,b]) => b-a).slice(0, 10);
+            const dataAbertura = caixaStatus.abertoEm ? new Date(caixaStatus.abertoEm.toDate()).toLocaleTimeString('pt-BR') : 'N/A';
+
+            const container = modal.querySelector('#relatorios-container');
+            container.innerHTML = `
+                <header class="p-4 border-b border-gray-700 flex justify-between items-center">
+                    <div>
+                        <h2 class="text-2xl font-bold">Relatório do Turno</h2>
+                        <p class="text-xs text-gray-400">Caixa aberto às ${dataAbertura}</p>
+                    </div>
+                    <button onclick="fecharRelatoriosView()" class="text-gray-400 hover:text-white"><i class="fas fa-times text-2xl"></i></button>
+                </header>
+                <div class="p-6 overflow-y-auto no-scrollbar">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 text-center">
+                        <div class="bg-gray-700 p-4 rounded-lg">
+                            <p class="text-sm text-gray-400">Faturamento Total</p>
+                            <p class="text-3xl font-extrabold text-green-400">${formatCurrency(faturamentoTotal)}</p>
+                        </div>
+                        <div class="bg-gray-700 p-4 rounded-lg">
+                            <p class="text-sm text-gray-400">Ticket Médio</p>
+                            <p class="text-3xl font-extrabold text-blue-400">${formatCurrency(ticketMedio)}</p>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold mb-3">Produtos Mais Vendidos</h3>
+                        <ul class="space-y-2">
+                            ${produtosMaisVendidos.length > 0 ? produtosMaisVendidos.map(([nome, qtd]) => `
+                                <li class="flex justify-between items-center bg-gray-700/50 p-3 rounded-md">
+                                    <span class="font-semibold">${nome}</span>
+                                    <span class="font-bold bg-amber-500 text-gray-900 rounded-full px-3 py-1 text-sm">${qtd} vendidos</span>
+                                </li>
+                            `).join('') : '<li class="text-center text-gray-500">Nenhuma venda registrada neste turno.</li>'}
+                        </ul>
+                    </div>
+                </div>
+            `;
+        };
+
+        const fecharRelatoriosView = () => document.getElementById('relatorios-view').classList.add('hidden');
+
+        const showNotification = (message, type = 'success') => {
+            const el = document.getElementById('notification');
+            if(!el) return;
+            el.querySelector('p').textContent = message;
+            el.classList.remove('hidden', 'bg-green-500', 'bg-red-500', 'bg-blue-500', 'fade-in');
+            
+            let colorClass = 'bg-green-500';
+            if (type === 'error') colorClass = 'bg-red-500';
+            if (type === 'info') colorClass = 'bg-blue-500';
+
+            el.classList.add(colorClass, 'fade-in');
+            setTimeout(() => {
+                el.classList.add('fade-out');
+            }, 2500);
+            setTimeout(() => {
+                el.classList.remove('fade-in', 'fade-out');
+                el.classList.add('hidden');
+            }, 3000);
+        };
+        const formatCurrency = v => v ? v.toLocaleString('pt-BR', { style: 'currency', 'currency': 'BRL' }) : 'R$ 0,00';
+        
+        // Expondo as funções para o escopo global (necessário para `onclick` no HTML)
+        window.selecionarPerfil = selecionarPerfil; window.voltarParaPerfis = voltarParaPerfis; window.fecharPdvView = fecharPdvView; window.changeQty = changeQty; window.enviarPedido = enviarPedido; window.marcarPedidoPronto = marcarPedidoPronto; window.fecharDetalheCaixaView = fecharDetalheCaixaView; window.fecharConta = fecharConta; window.renderPdvScreen = renderPdvScreen; window.abrirDetalhesItem = abrirDetalhesItem; window.fecharDetalhesItem = fecharDetalhesItem; window.renderCozinhaScreen = renderCozinhaScreen; window.abrirRelatoriosView = abrirRelatoriosView; window.fecharRelatoriosView = fecharRelatoriosView; window.abrirModalAberturaCaixa = abrirModalAberturaCaixa; window.abrirCaixa = abrirCaixa; window.fecharCaixa = fecharCaixa;
         
         initFirebase();
     </script>
