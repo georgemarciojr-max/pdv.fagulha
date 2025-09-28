@@ -77,7 +77,7 @@
         // CARDÁPIO ATUALIZADO
         const cardapio = {
             "Espetos Clássicos": [
-                { id: 'esp-frango', nome: 'Frango', preco: 10.00 }, { id: 'esp-coracao', nome: 'Coração', preco: 10.00 }, { id: 'esp-linguica', nome: 'Linguiça', preco: 10.00 }, { id: 'esp-paoalho', nome: 'Pão de Alho', preco: 10.00 }, { id: 'esp-santamassa', nome: 'Santa Massa', preco: 10.00 }, { id: 'esp-queijo', nome: 'Queijo Coalho', preco: 12.00 }, { id: 'esp-torresmo', nome: 'Torresmo', preco: 12.00 }, { id: 'esp-kafta', nome: 'Kafta', preco: 12.00 }, { id: 'esp-alcatra', nome: 'Alcatra', preco: 14.00 }
+                { id: 'esp-frango', nome: 'Frango', preco: 10.00 }, { id: 'esp-coracao', nome: 'Coração', preco: 10.00 }, { id: 'esp-linguica', nome: 'Linguiça', preco: 10.00 }, { id: 'esp-paoalho', nome: 'Pão de Alho', preco: 10.00 }, { id: 'esp-santamassa', nome: 'Santa Massa', preco: 10.00 }, { id: 'esp-queijo', nome: 'Queijo Coalho', preco: 12.00 }, { id: 'esp-torresmo-espeto', nome: 'Torresmo', preco: 12.00 }, { id: 'esp-kafta', nome: 'Kafta', preco: 12.00 }, { id: 'esp-alcatra', nome: 'Alcatra', preco: 14.00 }
             ],
             "Espetos Premium": [
                 { id: 'prem-costela', nome: 'Costela', preco: 18.00 }, { id: 'prem-picanha', nome: 'Picanha', preco: 18.00, description: 'Maturatta Friboi' }, { id: 'prem-medalhao-alcatra', nome: 'Medalhão de Alcatra', preco: 18.00 }, { id: 'prem-medalhao-palmito', nome: 'Medalhão de Palmito', preco: 18.00 }, { id: 'prem-kafta-queijo', nome: 'Kafta com Queijo', preco: 16.00 }, { id: 'prem-medalhao-frango', nome: 'Medalhão de Frango', preco: 16.00 }, { id: 'prem-romeujulieta', nome: 'Medalhão Romeu e Julieta', preco: 16.00 }, { id: 'prem-almondega', nome: 'Medalhão de Almôndega', preco: 16.00 }, { id: 'prem-vegetariano', nome: 'Vegetariano', preco: 16.00 }, { id: 'prem-mandioca', nome: 'Medalhão de Mandioca', preco: 16.00, description: 'Com carne seca e queijo' }
@@ -95,21 +95,88 @@
 
         let app, auth, db, perfilAtual, mesaSelecionada, comandaTemporaria = [], listeners = [], synth;
 
-        const initFirebase = async () => { /* ...código idêntico... */ };
-        const selecionarPerfil = p => { /* ...código idêntico... */ };
-        const voltarParaPerfis = () => { /* ...código idêntico... */ };
-        const setupMesasView = () => { /* ...código idêntico... */ };
+        const initFirebase = async () => {
+            const statusEl = document.getElementById('connecting-status');
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                onAuthStateChanged(auth, user => {
+                    if (user) {
+                        statusEl.textContent = "Conectado!";
+                        statusEl.classList.remove('text-gray-500', 'text-red-500');
+                        statusEl.classList.add('text-green-500');
+                        document.querySelectorAll('#perfil-view button').forEach(b => b.disabled = false);
+                    }
+                });
+
+                if (!auth.currentUser) {
+                    await signInAnonymously(auth);
+                }
+
+                document.body.addEventListener('click', () => {
+                    if (!synth) synth = new Tone.Synth().toDestination();
+                }, { once: true });
+
+            } catch (e) {
+                console.error("Erro de inicialização do Firebase:", e);
+                statusEl.textContent = 'Erro de Configuração.';
+                statusEl.classList.remove('text-gray-500');
+                statusEl.classList.add('text-red-500');
+            }
+        };
+        
+        const selecionarPerfil = p => {
+            perfilAtual = p;
+            document.getElementById('perfil-view').classList.add('hidden');
+            document.getElementById('main-view').classList.remove('hidden');
+            const titles = { caixa: 'Painel do Caixa', atendente: 'Mapa de Mesas', cozinha: 'Painel da Cozinha' };
+            document.getElementById('header-title').textContent = titles[p];
+            ['mesas-view', 'cozinha-view'].forEach(v => document.getElementById(v).classList.add('hidden'));
+            if (p === 'caixa' || p === 'atendente') {
+                document.getElementById('mesas-view').classList.remove('hidden'); setupMesasView();
+            } else {
+                document.getElementById('cozinha-view').classList.remove('hidden'); setupCozinhaView();
+            }
+        };
+
+        const voltarParaPerfis = () => {
+            perfilAtual = null;
+            document.getElementById('perfil-view').classList.remove('hidden');
+            document.getElementById('main-view').classList.add('hidden');
+            listeners.forEach(unsub => unsub()); listeners = [];
+            fecharPdvView(); fecharDetalheCaixaView();
+        };
+
+        const setupMesasView = () => {
+            const grid = document.getElementById('mesas-grid'); grid.innerHTML = '';
+            for (let i = 1; i <= 50; i++) {
+                const mesaEl = document.createElement('div'); mesaEl.id = `mesa-${i}`;
+                mesaEl.className = 'p-2 rounded-lg text-center cursor-pointer transition-all duration-300';
+                mesaEl.innerHTML = `<div class="font-extrabold text-3xl">${i}</div><div class="text-xs font-semibold"></div>`;
+                grid.appendChild(mesaEl);
+            }
+            const unsub = onSnapshot(collection(db, "mesas"), snapshot => {
+                let mesasAtivas = new Set();
+                snapshot.forEach(doc => { updateMesaCard(doc.id, doc.data()); mesasAtivas.add(doc.id); });
+                for (let i = 1; i <= 50; i++) if (!mesasAtivas.has(String(i))) updateMesaCard(i, { status: 'livre' });
+            });
+            listeners.push(unsub);
+        };
 
         const updateMesaCard = (numero, data) => {
             const mesaEl = document.getElementById(`mesa-${numero}`); if (!mesaEl) return;
-            const status = data.status || 'livre'; const total = data.total || 0;
+            const status = data.status || 'livre'; 
+            const total = data.total || 0;
             const nomeCliente = data.cliente || '';
             mesaEl.classList.remove('bg-green-600', 'bg-red-600', 'hover:bg-green-500', 'hover:bg-red-500');
             if (status === 'livre') {
-                mesaEl.classList.add('bg-green-600', 'hover:bg-green-500'); mesaEl.children[1].textContent = 'Livre';
+                mesaEl.classList.add('bg-green-600', 'hover:bg-green-500'); 
+                mesaEl.children[1].textContent = 'Livre';
             } else {
                 mesaEl.classList.add('bg-red-600', 'hover:bg-red-500');
-                mesaEl.children[1].innerHTML = `${nomeCliente ? `<span class='block text-xs truncate'>${nomeCliente}</span>` : ''}${formatCurrency(total)}`;
+                mesaEl.children[1].innerHTML = `${nomeCliente ? `<span class='block text-xs truncate font-normal'>${nomeCliente}</span>` : ''}<span class="font-bold">${formatCurrency(total)}</span>`;
             }
             mesaEl.onclick = () => handleMesaClick(numero, data);
         };
@@ -131,7 +198,20 @@
             renderPdvScreen('adicionar'); 
         };
 
-        const fecharPdvView = () => { /* ...código idêntico... */ };
+        const fecharPdvView = () => {
+            const el = document.getElementById('pdv-view');
+            const modal = el.querySelector('.fade-in');
+            if(modal) {
+                modal.classList.add('fade-out');
+                setTimeout(() => {
+                    el.innerHTML = '';
+                    el.classList.add('hidden');
+                }, 400);
+            } else {
+                el.innerHTML = '';
+                el.classList.add('hidden');
+            }
+        };
         
         const renderPdvScreen = (screen) => {
             const container = document.getElementById('pdv-view');
@@ -185,11 +265,34 @@
             }
         };
 
-        const renderCategorias = () => { /* ...código idêntico... */ };
-        const renderProdutos = (categoria) => { /* ...código idêntico... */ };
+        const renderCategorias = () => {
+            const container = document.getElementById('categorias-container');
+            if (!container) return;
+            container.innerHTML = '';
+            Object.keys(cardapio).forEach((categoria, index) => {
+                const button = document.createElement('button');
+                button.textContent = categoria;
+                button.className = `py-2 px-4 rounded-full font-semibold transition-colors text-sm whitespace-nowrap ${index === 0 ? 'bg-amber-500 text-white' : 'bg-gray-700 hover:bg-gray-600'}`;
+                button.onclick = () => {
+                    renderProdutos(categoria);
+                    container.querySelectorAll('button').forEach(btn => btn.classList.replace('bg-amber-500', 'bg-gray-700'));
+                    button.classList.replace('bg-gray-700', 'bg-amber-500');
+                };
+                container.appendChild(button);
+            });
+        };
         
-        const adicionarItem = (item) => {
-            abrirDetalhesItem(item);
+        const renderProdutos = (categoria) => {
+            const container = document.getElementById('produtos-container');
+            if (!container) return;
+            container.innerHTML = '';
+            cardapio[categoria].forEach(item => {
+                const card = document.createElement('div');
+                card.className = "bg-gray-700 p-3 rounded-lg shadow hover:bg-gray-600 text-left transition-all duration-200 transform hover:scale-105 cursor-pointer flex flex-col justify-between";
+                card.innerHTML = `<div><p class="font-semibold text-white">${item.nome}</p></div><p class="text-lg text-amber-400 font-bold mt-2">${formatCurrency(item.preco)}</p>`;
+                card.onclick = () => abrirDetalhesItem(item);
+                container.appendChild(card);
+            });
         };
         
         const abrirDetalhesItem = (item) => {
@@ -240,7 +343,7 @@
                 }
                 showNotification(`${quantidade}x ${item.nome} adicionado!`);
                 fecharDetalhesItem();
-                renderPdvScreen('adicionar'); // Recarrega a tela para atualizar o badge
+                renderPdvScreen('adicionar');
             };
         };
 
@@ -282,6 +385,7 @@
                 if (comandaTemporaria[itemIndex].quantidade <= 0) comandaTemporaria.splice(itemIndex, 1);
             }
             renderComanda();
+            renderPdvScreen('conta'); // Atualiza a tela da conta para refletir a mudança
         };
 
         const enviarPedido = async () => {
@@ -311,12 +415,76 @@
             fecharPdvView();
         };
 
-        const setupCozinhaView = () => { /* ...código idêntico... */ };
-        const marcarPedidoPronto = async id => { /* ...código idêntico... */ };
-        const abrirDetalheCaixaView = () => { /* ...código idêntico... */ };
-        const fecharDetalheCaixaView = () => { /* ...código idêntico... */ };
-        const fecharConta = async () => { /* ...código idêntico... */ };
-        const showNotification = (message, type = 'success') => { /* ...código idêntico... */ };
+        const setupCozinhaView = () => {
+            const q = query(collection(db, "pedidos_cozinha"), where("status", "==", "pendente"));
+            const unsub = onSnapshot(q, (snapshot) => {
+                const grid = document.getElementById('pedidos-cozinha-grid');
+                if(!grid) return;
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === "added") {
+                         if (synth) synth.triggerAttackRelease("C5", "0.5");
+                         const doc = change.doc;
+                         const pedido = doc.data();
+                         const pedidoCard = document.createElement('div');
+                         pedidoCard.id = `pedido-${doc.id}`;
+                         pedidoCard.className = 'bg-gray-800 p-4 rounded-lg shadow-lg flex flex-col gap-3 fade-in';
+                         let itensHtml = pedido.itens.map(item => `<li class="flex justify-between text-lg"><span class="font-bold">${item.quantidade}x</span><span>${item.nome}</span>${item.observacao ? `<span class="text-xs text-amber-400 italic block w-full">Obs: ${item.observacao}</span>` : ''}</li>`).join('');
+                         pedidoCard.innerHTML = `<div class="flex justify-between items-center pb-2 border-b border-gray-700"><h3 class="text-2xl font-extrabold text-amber-400">Mesa ${pedido.mesa}</h3><span class="text-xs text-gray-400">${pedido.criadoEm ? new Date(pedido.criadoEm.toDate()).toLocaleTimeString() : ''}</span></div><ul class="space-y-1 flex-grow">${itensHtml}</ul><button onclick="marcarPedidoPronto('${doc.id}')" class="w-full mt-2 bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition-colors">Marcar como Pronto</button>`;
+                         grid.insertBefore(pedidoCard, grid.firstChild);
+                    }
+                    if (change.type === "removed") {
+                        const card = document.getElementById(`pedido-${change.doc.id}`);
+                        if(card) card.remove();
+                    }
+                });
+                if(snapshot.empty && grid) grid.innerHTML = `<p class="text-gray-400 col-span-full text-center mt-10">Nenhum pedido pendente.</p>`;
+            });
+            listeners.push(unsub);
+        };
+        const marcarPedidoPronto = async id => await updateDoc(doc(db, "pedidos_cozinha", id), { status: 'pronto' });
+        
+        const abrirDetalheCaixaView = () => {
+            const modal = document.getElementById('caixa-detalhe-view');
+            modal.innerHTML = `
+             <div class="bg-gray-800 w-full max-w-md h-auto max-h-[80vh] rounded-2xl shadow-2xl flex flex-col fade-in">
+                 <header class="p-4 border-b border-gray-700 flex justify-between items-center"><h2 class="text-2xl font-bold">Detalhes - Mesa ${mesaSelecionada.numero}</h2><button onclick="fecharDetalheCaixaView()" class="text-gray-400 hover:text-white"><i class="fas fa-times text-2xl"></i></button></header>
+                <div class="p-6 overflow-y-auto no-scrollbar">
+                    ${mesaSelecionada.cliente ? `<p class="text-lg mb-4">Cliente: <span class="font-bold text-amber-400">${mesaSelecionada.cliente}</span></p>`: ''}
+                    <ul id="caixa-itens-lista" class="space-y-2 mb-6"></ul>
+                    <div class="border-t border-gray-700 pt-4">
+                        <div class="flex justify-between items-center text-3xl font-extrabold mb-6"><span>Total</span><span id="caixa-total-mesa">R$ 0,00</span></div>
+                        <button onclick="fecharConta()" class="w-full bg-blue-600 text-white font-bold py-4 px-4 rounded-lg hover:bg-blue-700 transition-colors shadow-lg text-lg flex items-center justify-center gap-2"><i class="fas fa-receipt"></i> Fechar Conta</button>
+                    </div>
+                </div>
+             </div>`;
+            const listaItens = modal.querySelector('#caixa-itens-lista');
+            if (mesaSelecionada.itens?.length > 0) {
+                 mesaSelecionada.itens.forEach(item => {
+                    const li = document.createElement('li'); li.className = "flex justify-between items-center text-lg";
+                    li.innerHTML = `<span>${item.quantidade}x ${item.nome}</span><span class="font-semibold">${formatCurrency(item.preco * item.quantidade)}</span>${item.observacao ? `<span class="w-full text-left text-xs text-amber-400 italic block">Obs: ${item.observacao}</span>` : ''}`;
+                    listaItens.appendChild(li);
+                });
+            } else { listaItens.innerHTML = `<p class="text-gray-400">Nenhum item lançado.</p>`; }
+            modal.querySelector('#caixa-total-mesa').textContent = formatCurrency(mesaSelecionada.total || 0);
+            modal.classList.remove('hidden');
+        };
+        const fecharDetalheCaixaView = () => document.getElementById('caixa-detalhe-view').classList.add('hidden');
+        const fecharConta = async () => {
+            if (!mesaSelecionada) return;
+            await setDoc(doc(db, "mesas", String(mesaSelecionada.numero)), { status: 'livre', total: 0, itens: [], cliente: '' });
+            showNotification(`Mesa ${mesaSelecionada.numero} fechada com sucesso!`);
+            fecharDetalheCaixaView();
+        };
+
+        const showNotification = (message, type = 'success') => {
+            const el = document.getElementById('notification');
+            el.querySelector('p').textContent = message;
+            el.classList.remove('hidden', 'bg-green-500', 'bg-red-500');
+            el.classList.add(type === 'success' ? 'bg-green-500' : 'bg-red-500', 'fade-in');
+            setTimeout(() => {
+                el.classList.remove('fade-in'); el.classList.add('hidden');
+            }, 2000);
+        };
         const formatCurrency = v => v ? v.toLocaleString('pt-BR', { style: 'currency', 'currency': 'BRL' }) : 'R$ 0,00';
         
         window.selecionarPerfil = selecionarPerfil; window.voltarParaPerfis = voltarParaPerfis; window.fecharPdvView = fecharPdvView; window.changeQty = changeQty; window.enviarPedido = enviarPedido; window.marcarPedidoPronto = marcarPedidoPronto; window.fecharDetalheCaixaView = fecharDetalheCaixaView; window.fecharConta = fecharConta; window.renderPdvScreen = renderPdvScreen; window.abrirDetalhesItem = abrirDetalhesItem; window.fecharDetalhesItem = fecharDetalhesItem;
