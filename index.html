@@ -478,8 +478,7 @@
             listenToPedidosCozinha();
         };
 
-                        const listenToPedidosCozinha = () => {
-            // CORREÇÃO APLICADA: Removido o 'orderBy("criadoEm")' da consulta para evitar o bug de sincronização.
+                                const listenToPedidosCozinha = () => {
             const q = query(collection(db, "pedidos_cozinha"), where("status", "in", ["pendente", "pronto"]));
             
             const unsub = onSnapshot(q, (snapshot) => {
@@ -487,38 +486,41 @@
                 const colPronto = document.getElementById('col-pronto');
                 if(!colPendente || !colPronto) return;
 
-                // Limpa as colunas para redesenhar
-                colPendente.innerHTML = '';
-                colPronto.innerHTML = '';
-
-                // Dispara o som para qualquer pedido novo que chegue como "pendente"
                 snapshot.docChanges().forEach(change => {
-                    if (change.type === "added" && change.doc.data().status === 'pendente' && synth) {
+                    const pedido = { id: change.doc.id, ...change.doc.data() };
+                    const cardId = `pedido-${pedido.id}`;
+                    const existingCard = document.getElementById(cardId);
+
+                    // Se o pedido foi removido (entregue, cancelado) ou seu status mudou
+                    if (change.type === "removed" || (change.type === "modified" && existingCard) ) {
+                        if (existingCard) existingCard.remove();
+                    }
+
+                    // Adiciona ou move o card para a coluna correta
+                    if (pedido.status === 'pendente') {
+                        colPendente.appendChild(createPedidoCard(pedido));
+                    } else if (pedido.status === 'pronto') {
+                        colPronto.appendChild(createPedidoCard(pedido));
+                    }
+
+                    // Toca o som apenas quando um novo pedido PENDENTE é adicionado
+                    if (change.type === "added" && pedido.status === 'pendente' && synth) {
                         synth.triggerAttackRelease("C5", "0.5");
                     }
                 });
+                
+                // Garante que a ordenação e as mensagens de "nenhum pedido" estejam corretas
+                sortCards(colPendente);
+                sortCards(colPronto);
+                if (colPendente.children.length === 0) colPendente.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum pedido pendente.</p>`;
+                if (colPronto.children.length === 0) colPronto.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum pedido pronto.</p>`;
 
-                // CORREÇÃO: Ordena os pedidos aqui no navegador, que é mais seguro
-                const sortedDocs = snapshot.docs.sort((a, b) => (a.data().criadoEm?.seconds || 0) - (b.data().criadoEm?.seconds || 0));
-
-                if(sortedDocs.length === 0) {
-                    colPendente.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum pedido pendente.</p>`;
-                    colPronto.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum pedido pronto.</p>`;
-                } else {
-                    let hasPending = false;
-                    let hasReady = false;
-                    
-                    sortedDocs.forEach(doc => {
-                        const pedido = {id: doc.id, ...doc.data()};
-                        if(pedido.status === 'pendente') {
-                            colPendente.appendChild(createPedidoCard(pedido));
-                            hasPending = true;
-                        } else if(pedido.status === 'pronto') {
-                            colPronto.appendChild(createPedidoCard(pedido));
-                            hasReady = true;
-                        }
-                    });
-
+                // Garante que o timer esteja sempre rodando
+                if (window.cozinhaTimerInterval) clearInterval(window.cozinhaTimerInterval);
+                window.cozinhaTimerInterval = setInterval(updateTimers, 1000);
+            });
+            listeners.push(unsub);
+        };
                     if (!hasPending) colPendente.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum pedido pendente.</p>`;
                     if (!hasReady) colPronto.innerHTML = `<p class="text-gray-500 text-center p-4">Nenhum pedido pronto.</p>`;
                 }
@@ -645,7 +647,29 @@
         const fecharDetalhesItem = () => document.getElementById('item-details-view').classList.add('hidden');
         const renderComanda = () => { const container = document.getElementById('comanda-itens'); const totalEl = document.getElementById('comanda-total'); if(!container || !totalEl) return; let total = 0; container.innerHTML = ''; if(comandaTemporaria.length === 0) { container.innerHTML = '<p class="text-center text-gray-500">Nenhum item.</p>'; totalEl.textContent = formatCurrency(0); return; } comandaTemporaria.forEach((item, i) => { total += item.preco * item.quantidade; const itemDiv = document.createElement('div'); itemDiv.className = "flex justify-between items-center bg-gray-700/50 p-2 rounded"; itemDiv.innerHTML = `<div><p>${item.nome}</p>${item.observacao ? `<p class="text-xs text-amber-400">Obs: ${item.observacao}</p>` : ''}</div><div class="flex items-center gap-3"><button onclick="changeQty(${i}, -1)">-</button><span>${item.quantidade}</span><button onclick="changeQty(${i}, 1)">+</button></div>`; container.appendChild(itemDiv); }); totalEl.textContent = formatCurrency(total); };
         const changeQty = (i, amount) => { if(comandaTemporaria[i]) { comandaTemporaria[i].quantidade += amount; if (comandaTemporaria[i].quantidade <= 0) comandaTemporaria.splice(i, 1); } renderComanda(); };
-        const updateTimers = () => { document.querySelectorAll('[data-timestamp]').forEach(el => { const timestamp = parseInt(el.dataset.timestamp, 10); if (!timestamp) return; const diff = Math.floor(Date.now() / 1000) - timestamp; const minutes = Math.floor(diff / 60); const seconds = diff % 60; el.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`; el.classList.remove('text-green-400', 'text-yellow-400', 'text-red-500'); if (minutes >= 15) el.classList.add('text-red-500'); else if (minutes >= 8) el.classList.add('text-yellow-400'); else el.classList.add('text-green-400'); }); };
+                const updateTimers = () => {
+            document.querySelectorAll('[data-timestamp]').forEach(el => {
+                const timestamp = parseInt(el.dataset.timestamp, 10);
+                if (!timestamp) return;
+                
+                const diff = Math.floor(Date.now() / 1000) - timestamp;
+                const minutes = Math.floor(diff / 60);
+                const seconds = diff % 60;
+                
+                el.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                
+                el.classList.remove('text-green-400', 'text-yellow-400', 'text-red-500');
+
+                // LÓGICA DE COR CORRIGIDA
+                if (minutes >= 35) {
+                    el.classList.add('text-red-500');
+                } else if (minutes >= 25) {
+                    el.classList.add('text-yellow-400');
+                } else {
+                    el.classList.add('text-green-400');
+                }
+            });
+        };
         const abrirRelatoriosView = async () => { /* Lógica de relatórios mantida como antes */ }; const fecharRelatoriosView = () => document.getElementById('relatorios-view').classList.add('hidden');
         const fecharDetalheCaixaView = () => document.getElementById('caixa-detalhe-view').classList.add('hidden');
         const formatCurrency = v => v ? v.toLocaleString('pt-BR', { style: 'currency', 'currency': 'BRL' }) : 'R$ 0,00';
