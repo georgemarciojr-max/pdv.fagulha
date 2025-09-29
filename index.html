@@ -619,4 +619,9 @@
         const formatCurrency = v => v ? v.toLocaleString('pt-BR', { style: 'currency', 'currency': 'BRL' }) : 'R$ 0,00';
 
         // Expondo as funções necessárias globalmente
-        window.handleLogout = handleLogout; window.abrirGestaoUsuariosView = abrirGestaoUsuariosView; window.toggleUserStatus = toggleUserStatus; window.fecharConta = fecharConta; window.cancelarPedidosMesa = cancelarPedidosMesa; window.marcarPedidoPronto = marcarPedidoPronto; window.marcarPedidoEntregue = marcarPedidoEntregue; window.abrirModalAberturaCaixa=abrirModalAberturaCaixa; window.abrirCaixa=abrirCaixa; window.fecharCaixa=fecharCaixa; window.fecharPdvView=fecharPdvView; window.renderPdvScreen=renderPdvScreen; window.enviarPedido=enviarPedido; window.changeQty=changeQty; window.fecharDetalhesItem=fecharDetalhesItem; window.fecharDetalheCaixaView=fecharDetalheCaixaView; window.handle
+        window.handleLogout = handleLogout; window.abrirGestaoUsuariosView = abrirGestaoUsuariosView; window.toggleUserStatus = toggleUserStatus; window.fecharConta = fecharConta; window.cancelarPedidosMesa = cancelarPedidosMesa; window.marcarPedidoPronto = marcarPedidoPronto; window.marcarPedidoEntregue = marcarPedidoEntregue; window.abrirModalAberturaCaixa=abrirModalAberturaCaixa; window.abrirCaixa=abrirCaixa; window.fecharCaixa=fecharCaixa; window.fecharPdvView=fecharPdvView; window.renderPdvScreen=renderPdvScreen; window.enviarPedido=enviarPedido; window.changeQty=changeQty; window.fecharDetalhesItem=fecharDetalhesItem; window.fecharDetalheCaixaView=fecharDetalheCaixaView; window.handleCriarUsuario = handleCriarUsuario;
+        
+        initFirebase();
+    </script>
+</body>
+</html>
