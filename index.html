@@ -192,7 +192,7 @@
                     document.getElementById('header-title').textContent = 'Mapa de Mesas';
                     mainContainer.innerHTML = `<div id="mesas-view" class="p-4 sm:p-6"><div id="mesas-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-4"></div></div>`;
                     setupMesasView();
-                    setupNotificacaoListener(); 
+                    setupNotificacaoListener(); // FASE 4: Ativa notificações para o atendente
                 }
             } else if (usuarioLogado.perfil === 'cozinha') {
                  if (caixaStatus.status !== 'aberto') {
@@ -205,6 +205,7 @@
             }
         };
 
+        // --- FASE 1: GESTÃO DE USUÁRIOS (VISÍVEL APENAS PARA O 'CAIXA') ---
         const abrirGestaoUsuariosView = async () => {
             const modal = document.getElementById('gestao-usuarios-view');
             modal.classList.remove('hidden');
@@ -248,6 +249,7 @@
             container.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Carregando...`;
 
             const q = query(collection(db, "usuarios"), orderBy("nome"));
+            // Usar onSnapshot para atualizar a lista em tempo real
             const unsub = onSnapshot(q, (snapshot) => {
                 if(snapshot.empty) {
                     container.innerHTML = `<p class="text-gray-400">Nenhum usuário cadastrado.</p>`;
@@ -271,7 +273,7 @@
                     container.appendChild(userEl);
                 });
             });
-            listeners.push(unsub); 
+            listeners.push(unsub); // Adicionar à lista para limpar no logout
         };
         
         const handleCriarUsuario = async (e) => {
@@ -286,19 +288,33 @@
                 return;
             }
 
+            // --- Início da Mágica: Conexão Temporária ---
             const appName = `temp-user-creation-${Date.now()}`;
             const tempApp = initializeApp(firebaseConfig, appName);
             const tempAuth = getAuth(tempApp);
-            
+            // --- Fim da Mágica ---
+
             showNotification("Processando criação...", "info");
 
             try {
+                // 1. Criar o usuário no serviço de Autenticação usando a conexão temporária
                 const userCredential = await createUserWithEmailAndPassword(tempAuth, email, senha);
                 const newUser = userCredential.user;
-                await setDoc(doc(db, "usuarios", newUser.uid), { nome, email, perfil, status: 'ativo' });
+
+                // 2. Criar o documento do usuário no Firestore usando a conexão principal (db)
+                await setDoc(doc(db, "usuarios", newUser.uid), {
+                    nome: nome,
+                    email: email,
+                    perfil: perfil,
+                    status: 'ativo'
+                });
+                
+                // 3. Deslogar o usuário recém-criado da conexão temporária (boa prática)
                 await signOut(tempAuth);
+                
                 showNotification(`Usuário "${nome}" criado com sucesso!`, "success");
-                e.target.reset();
+                e.target.reset(); // Limpa o formulário
+
             } catch (error) {
                 console.error("Erro ao criar usuário:", error);
                 if (error.code === 'auth/email-already-in-use') {
@@ -342,36 +358,119 @@
         };
 
         const fecharConta = async () => {
-            // ... (A ser implementado com a nova lógica de auditoria) ...
-            showNotification("Função 'Fechar Conta' em desenvolvimento.", "info");
+             if (!mesaSelecionada || !mesaSelecionada.itens || mesaSelecionada.itens.length === 0) {
+                showNotification('A mesa está vazia, não é possível fechar.', 'error'); return;
+            }
+            const batch = writeBatch(db);
+            const vendaRef = doc(collection(db, "vendas_finalizadas"));
+            batch.set(vendaRef, {
+                mesa: mesaSelecionada.numero, cliente: mesaSelecionada.cliente || '',
+                itens: mesaSelecionada.itens, total: mesaSelecionada.total,
+                abertaEm: mesaSelecionada.abertaEm, finalizadaEm: serverTimestamp(),
+                fechadoPor: { uid: usuarioLogado.uid, nome: usuarioLogado.nome }
+            });
+            batch.delete(doc(db, "mesas", String(mesaSelecionada.numero)));
+            await batch.commit();
+            showNotification(`Mesa ${mesaSelecionada.numero} fechada com sucesso!`);
+            fecharDetalheCaixaView();
         };
 
         const abrirDetalheCaixaView = () => {
-            // ... (A ser implementado com a nova lógica de cancelamento) ...
-            showNotification("Função 'Detalhe Caixa' em desenvolvimento.", "info");
+            const modal = document.getElementById('caixa-detalhe-view');
+            modal.innerHTML = `
+             <div class="bg-gray-800 w-full max-w-md h-auto max-h-[80vh] rounded-2xl shadow-2xl flex flex-col fade-in">
+                <header class="p-4 border-b border-gray-700 flex justify-between items-center"><h2 class="text-2xl font-bold">Detalhes - Mesa ${mesaSelecionada.numero}</h2><button onclick="fecharDetalheCaixaView()" class="text-gray-400 hover:text-white"><i class="fas fa-times text-2xl"></i></button></header>
+                <div class="p-6 overflow-y-auto no-scrollbar">
+                    ${mesaSelecionada.cliente ? `<p class="text-lg mb-4">Cliente: <span class="font-bold text-amber-400">${mesaSelecionada.cliente}</span></p>`: ''}
+                    <ul id="caixa-itens-lista" class="space-y-3 mb-6"></ul>
+                    <div class="border-t border-gray-700 pt-4 space-y-3">
+                        <div class="flex justify-between items-center text-3xl font-extrabold"><span>Total</span><span id="caixa-total-mesa">${formatCurrency(mesaSelecionada.total || 0)}</span></div>
+                        <button onclick="fecharConta()" class="w-full bg-blue-600 text-white font-bold py-4 px-4 rounded-lg hover:bg-blue-700 text-lg flex items-center justify-center gap-2"><i class="fas fa-receipt"></i> Fechar Conta</button>
+                        <button onclick="cancelarPedidosMesa(${mesaSelecionada.numero})" class="w-full bg-red-800 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 text-sm flex items-center justify-center gap-2"><i class="fas fa-trash-alt"></i> Cancelar Pedidos Pendentes</button>
+                    </div>
+                </div>
+             </div>`;
+            const listaItens = modal.querySelector('#caixa-itens-lista');
+            if (mesaSelecionada.itens?.length > 0) {
+                 mesaSelecionada.itens.forEach(item => {
+                    const li = document.createElement('li'); li.className = "flex justify-between items-start text-lg flex-wrap";
+                    li.innerHTML = `<span class="mr-2">${item.quantidade}x ${item.nome}</span><span class="font-semibold ml-auto">${formatCurrency(item.preco * item.quantidade)}</span>${item.observacao ? `<span class="w-full text-left text-xs text-amber-400 italic block">Obs: ${item.observacao}</span>` : ''}`;
+                    listaItens.appendChild(li);
+                });
+            } else { listaItens.innerHTML = `<p class="text-gray-400">Nenhum item lançado.</p>`; }
+            modal.classList.remove('hidden');
         };
 
         const cancelarPedidosMesa = async (numeroMesa) => {
-            // ... (A ser implementado) ...
-            showNotification("Função 'Cancelar Pedido' em desenvolvimento.", "info");
+            if(!confirm(`Tem certeza que deseja cancelar TODOS os pedidos PENDENTES da mesa ${numeroMesa}? Os itens serão removidos da conta.`)) return;
+
+            const q = query(collection(db, "pedidos_cozinha"), where("mesa", "==", numeroMesa), where("status", "==", "pendente"));
+            const pedidosParaCancelar = await getDocs(q);
+
+            if (pedidosParaCancelar.empty) {
+                showNotification("Nenhum pedido pendente para cancelar nesta mesa.", "info");
+                return;
+            }
+
+            const batch = writeBatch(db);
+            pedidosParaCancelar.forEach(doc => {
+                batch.update(doc.ref, { 
+                    status: 'cancelado',
+                    canceladoPor: { uid: usuarioLogado.uid, nome: usuarioLogado.nome },
+                    canceladoEm: serverTimestamp()
+                });
+            });
+            
+            const mesaRef = doc(db, "mesas", String(numeroMesa));
+            batch.update(mesaRef, { itens: [], total: 0 });
+            showNotification("A mesa foi zerada. Relance os itens que permaneceram.", "info");
+            
+            await batch.commit();
+            showNotification(`Pedidos da mesa ${numeroMesa} cancelados!`, "success");
+            fecharDetalheCaixaView();
         };
 
         const enviarPedido = async () => {
-            // ... (A ser implementado com a nova lógica de auditoria) ...
-            showNotification("Função 'Enviar Pedido' em desenvolvimento.", "info");
+            const nomeCliente = document.getElementById('cliente-nome')?.value.trim() || mesaSelecionada.cliente || '';
+            const itensOriginais = mesaSelecionada.itens || [];
+            const itensEnviados = comandaTemporaria.filter(item => {
+                const itemOriginal = itensOriginais.find(i => i.id === item.id && i.observacao === item.observacao);
+                return !itemOriginal || item.quantidade > itemOriginal.quantidade;
+            }).map(item => {
+                const itemOriginal = itensOriginais.find(i => i.id === item.id && i.observacao === item.observacao);
+                return { ...item, quantidade: itemOriginal ? item.quantidade - itemOriginal.quantidade : item.quantidade };
+            }).filter(item => item.quantidade > 0);
+
+            if (itensEnviados.length === 0 && nomeCliente === (mesaSelecionada.cliente || '')) { 
+                showNotification('Nenhuma alteração para enviar.', 'info'); return; 
+            }
+            const batch = writeBatch(db);
+            if(itensEnviados.length > 0) {
+                const pedidoCozinhaRef = doc(collection(db, "pedidos_cozinha"));
+                batch.set(pedidoCozinhaRef, {
+                    mesa: mesaSelecionada.numero, cliente: nomeCliente, itens: itensEnviados, 
+                    status: 'pendente', criadoEm: serverTimestamp(),
+                    lancadoPor: { uid: usuarioLogado.uid, nome: usuarioLogado.nome }
+                });
+            }
+            const mesaRef = doc(db, "mesas", String(mesaSelecionada.numero));
+            const novoTotal = comandaTemporaria.reduce((acc, item) => acc + (item.preco * item.quantidade), 0);
+            batch.set(mesaRef, { status: 'ocupada', total: novoTotal, itens: comandaTemporaria, cliente: nomeCliente, abertaEm: mesaSelecionada.abertaEm || serverTimestamp() }, { merge: true });
+            await batch.commit();
+            showNotification(`Mesa ${mesaSelecionada.numero} atualizada!`);
+            fecharPdvView();
         };
         
         const setupCozinhaView = () => {
-            // AQUI ENTRA A CORREÇÃO FOCAL DO BUG DA COZINHA
             const container = document.getElementById('cozinha-view');
             container.innerHTML = `
                 <div class="h-full flex gap-4 p-4 overflow-x-auto">
-                    <div class="bg-gray-800 rounded-lg w-full md:w-1/2 flex-shrink-0 flex flex-col">
-                        <h2 class="text-xl font-bold p-3 border-b border-gray-700 text-yellow-400 text-center">A FAZER</h2>
+                    <div class="bg-gray-800 rounded-lg w-80 flex-shrink-0 flex flex-col">
+                        <h2 class="text-xl font-bold p-3 border-b border-gray-700 text-yellow-400">A FAZER</h2>
                         <div id="col-pendente" class="p-3 space-y-3 overflow-y-auto flex-1"></div>
                     </div>
-                    <div class="bg-gray-800 rounded-lg w-full md:w-1/2 flex-shrink-0 flex flex-col">
-                        <h2 class="text-xl font-bold p-3 border-b border-gray-700 text-green-400 text-center">AGUARDANDO RETIRADA</h2>
+                    <div class="bg-gray-800 rounded-lg w-80 flex-shrink-0 flex flex-col">
+                        <h2 class="text-xl font-bold p-3 border-b border-gray-700 text-green-400">AGUARDANDO RETIRADA</h2>
                         <div id="col-pronto" class="p-3 space-y-3 overflow-y-auto flex-1"></div>
                     </div>
                 </div>
@@ -380,7 +479,6 @@
         };
 
         const listenToPedidosCozinha = () => {
-            // A CORREÇÃO ESTÁ AQUI: REMOVEMOS O orderBy("criadoEm") DA CONSULTA
             const q = query(collection(db, "pedidos_cozinha"), where("status", "in", ["pendente", "pronto"]));
             
             const unsub = onSnapshot(q, (snapshot) => {
@@ -394,7 +492,10 @@
                     const existingCard = document.getElementById(cardId);
 
                     if (change.type === "removed" || pedido.status === 'entregue' || pedido.status === 'cancelado') {
-                        if (existingCard) existingCard.remove();
+                        if (existingCard) {
+                            existingCard.classList.add('fade-out');
+                            existingCard.addEventListener('animationend', () => existingCard.remove());
+                        }
                     } else { // added or modified
                         if (existingCard) existingCard.remove();
                         
@@ -410,7 +511,6 @@
                     }
                 });
                 
-                // Ordena os cards dentro de cada coluna após as atualizações
                 sortCards(colPendente);
                 sortCards(colPronto);
                 
@@ -425,11 +525,9 @@
         };
         
         const sortCards = (container) => {
-            const cards = Array.from(container.children);
-            if(cards.length > 1 && cards[0].dataset) {
-                cards.sort((a, b) => (a.dataset.timestamp || 0) - (b.dataset.timestamp || 0));
-                cards.forEach(card => container.appendChild(card));
-            }
+            const cards = Array.from(container.children).filter(c => c.dataset.timestamp);
+            cards.sort((a, b) => (a.dataset.timestamp || 0) - (b.dataset.timestamp || 0));
+            cards.forEach(card => container.appendChild(card));
         };
 
         const createPedidoCard = (pedido) => {
@@ -450,7 +548,7 @@
                     <h3 class="text-lg font-extrabold text-amber-400">Mesa ${pedido.mesa}</h3>
                     <span class="text-xs font-bold" data-timestamp="${pedido.criadoEm?.seconds}">00:00</span>
                 </div>
-                <p class="text-xs text-gray-400">Por: ${pedido.lancadoPor?.nome || 'N/A'}</p>
+                <p class="text-xs text-gray-400">Por: ${pedido.lancadoPor.nome}</p>
                 <p class="text-sm">${pedido.itens.map(i => `${i.quantidade}x ${i.nome}`).join(', ')}</p>
                 ${actionButton}
             `;
@@ -460,34 +558,65 @@
         const marcarPedidoPronto = id => updateDoc(doc(db, "pedidos_cozinha", id), { status: 'pronto' });
         const marcarPedidoEntregue = id => updateDoc(doc(db, "pedidos_cozinha", id), { status: 'entregue' });
 
-        const setupNotificacaoListener = () => { /* ... (código idêntico ao anterior) ... */ };
+        const setupNotificacaoListener = () => {
+            if (!usuarioLogado || usuarioLogado.perfil !== 'atendente') return;
+            
+            const q = query(collection(db, "pedidos_cozinha"), 
+                where("status", "==", "pronto"), 
+                where("lancadoPor.uid", "==", usuarioLogado.uid)
+            );
+
+            const unsub = onSnapshot(q, (snapshot) => {
+                snapshot.docChanges().forEach(change => {
+                    if (change.type === "added") {
+                        const pedido = change.doc.data();
+                        showNotification(`Pedido da Mesa ${pedido.mesa} pronto para retirada!`, 'info', 10000);
+                        if (synth) synth.triggerAttackRelease("G5", "0.5");
+                    }
+                });
+            });
+            listeners.push(unsub);
+        };
         
-        const showNotification = (message, type = 'success', duration = 3000) => { /* ... (código idêntico ao anterior) ... */ };
-        const renderCaixaFechadoView = () => { /* ... (código idêntico ao anterior) ... */ };
-        const abrirModalAberturaCaixa = () => { /* ... (código idêntico ao anterior) ... */ };
-        const abrirCaixa = async () => { /* ... (código idêntico ao anterior) ... */ };
-        const fecharCaixa = async () => { /* ... (código idêntico ao anterior) ... */ };
-        const setupMesasView = () => { /* ... (código idêntico ao anterior) ... */ };
-        const updateMesaCard = (numero, data) => { /* ... (código idêntico ao anterior) ... */ };
-        const handleMesaClick = async (numero, data) => { /* ... (código idêntico ao anterior) ... */ };
-        const abrirPdvView = async (numero) => { /* ... (código idêntico ao anterior) ... */ };
-        const fecharPdvView = () => { /* ... (código idêntico ao anterior) ... */ };
-        const renderPdvScreen = (screen) => { /* ... (código idêntico ao anterior) ... */ };
-        const renderCategorias = () => { /* ... (código idêntico ao anterior) ... */ };
-        const renderProdutos = (cat) => { /* ... (código idêntico ao anterior) ... */ };
-        const abrirDetalhesItem = (item) => { /* ... (código idêntico ao anterior) ... */ };
+        const showNotification = (message, type = 'success', duration = 3000) => {
+            const container = document.getElementById('notification-container');
+            const el = document.createElement('div');
+            el.className = `py-3 px-5 rounded-lg shadow-xl text-white fade-in`;
+            
+            let colorClass = 'bg-green-500';
+            if (type === 'error') colorClass = 'bg-red-500';
+            if (type === 'info') colorClass = 'bg-blue-500';
+            el.classList.add(colorClass);
+            
+            el.innerHTML = `<p>${message}</p>`;
+            container.appendChild(el);
+
+            setTimeout(() => {
+                el.classList.add('fade-out');
+                el.addEventListener('animationend', () => el.remove());
+            }, duration - 500);
+        };
+        
+        const renderCaixaFechadoView = () => { document.getElementById('header-title').textContent = 'Caixa Fechado'; document.getElementById('main-container').innerHTML = `<div class="flex flex-col items-center justify-center h-full text-center p-4"><i class="fas fa-door-closed text-7xl text-gray-500 mb-6"></i><h2 class="text-4xl font-extrabold mb-2">O Caixa está Fechado</h2><p class="text-gray-400 mb-8">Abra o caixa para iniciar as operações do dia.</p><button onclick="abrirModalAberturaCaixa()" class="bg-green-600 text-white font-bold py-4 px-8 rounded-xl text-xl hover:bg-green-700 transition-colors shadow-lg flex items-center gap-3"><i class="fas fa-cash-register"></i> Abrir Caixa</button></div>`; };
+        const abrirModalAberturaCaixa = () => { const modal = document.getElementById('abrir-caixa-view'); modal.classList.remove('hidden'); modal.innerHTML = `<div class="bg-gray-800 w-full max-w-sm rounded-2xl shadow-2xl p-6 fade-in"><h3 class="text-xl font-bold mb-4">Abrir Caixa</h3><p class="text-sm text-gray-400 mb-4">Digite o valor inicial do caixa (suprimento).</p><div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">R$</span><input type="number" id="valor-abertura" class="w-full bg-gray-700 text-white p-3 pl-10 rounded-lg text-lg border-0" placeholder="0,00"></div><div class="grid grid-cols-2 gap-3 mt-6"><button onclick="document.getElementById('abrir-caixa-view').classList.add('hidden')" class="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg">Cancelar</button><button onclick="abrirCaixa()" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg">Confirmar</button></div></div>`; document.getElementById('valor-abertura').focus(); };
+        const abrirCaixa = async () => { const valor = parseFloat(document.getElementById('valor-abertura').value) || 0; await setDoc(doc(db, "configuracao", "caixa"), { status: 'aberto', valorAbertura: valor, abertoEm: serverTimestamp(), abertoPor: { uid: usuarioLogado.uid, nome: usuarioLogado.nome } }); document.getElementById('abrir-caixa-view').classList.add('hidden'); showNotification(`Caixa aberto com ${formatCurrency(valor)}!`); };
+        const fecharCaixa = async () => { if (confirm("Tem certeza que deseja fechar o caixa?")) { await updateDoc(doc(db, "configuracao", "caixa"), { status: 'fechado', fechadoEm: serverTimestamp(), fechadoPor: { uid: usuarioLogado.uid, nome: usuarioLogado.nome } }); showNotification('Caixa fechado!'); } };
+        const setupMesasView = () => { const grid = document.getElementById('mesas-grid'); if(!grid) return; grid.innerHTML = ''; for (let i = 1; i <= 50; i++) { const mesaEl = document.createElement('div'); mesaEl.id = `mesa-${i}`; mesaEl.className = 'p-2 rounded-lg text-center cursor-pointer transition-all duration-300'; mesaEl.innerHTML = `<div class="font-extrabold text-3xl">${i}</div><div class="text-xs font-semibold"></div>`; grid.appendChild(mesaEl); } const unsub = onSnapshot(collection(db, "mesas"), snapshot => { let mesasAtivas = new Set(); snapshot.forEach(doc => { updateMesaCard(doc.id, doc.data()); mesasAtivas.add(doc.id); }); for (let i = 1; i <= 50; i++) if (!mesasAtivas.has(String(i))) updateMesaCard(i, { status: 'livre' }); }); listeners.push(unsub); };
+        const updateMesaCard = (numero, data) => { const mesaEl = document.getElementById(`mesa-${numero}`); if (!mesaEl) return; const status = data.status || 'livre'; mesaEl.className = 'p-2 rounded-lg text-center cursor-pointer transition-all duration-300'; if (status === 'livre') { mesaEl.classList.add('bg-green-600', 'hover:bg-green-500'); mesaEl.children[1].textContent = 'Livre'; } else { mesaEl.classList.add('bg-red-600', 'hover:bg-red-500'); mesaEl.children[1].innerHTML = `${data.cliente ? `<span class='block text-xs truncate font-normal'>${data.cliente}</span>` : ''}<span class="font-bold">${formatCurrency(data.total || 0)}</span>`; } mesaEl.onclick = () => handleMesaClick(numero, data); };
+        const handleMesaClick = async (numero, data) => { if (usuarioLogado.perfil === 'atendente') { abrirPdvView(numero); } else if (usuarioLogado.perfil === 'caixa' && data.status === 'ocupada') { mesaSelecionada = { numero, ...data }; abrirDetalheCaixaView(); } };
+        const abrirPdvView = async (numero) => { const mesaDoc = await getDoc(doc(db, "mesas", String(numero))); mesaSelecionada = { numero, ...mesaDoc.data() }; comandaTemporaria = mesaSelecionada.itens ? JSON.parse(JSON.stringify(mesaSelecionada.itens)) : []; document.getElementById('pdv-view').classList.remove('hidden'); renderPdvScreen('adicionar'); };
+        const fecharPdvView = () => { const el = document.getElementById('pdv-view'); el.classList.add('hidden'); el.innerHTML = ''; };
+        const renderPdvScreen = (screen) => { const container = document.getElementById('pdv-view'); const totalItens = comandaTemporaria.reduce((acc, item) => acc + item.quantidade, 0); container.innerHTML = `<div class="bg-gray-800 w-full h-full flex flex-col fade-in"><header class="p-4 border-b border-gray-700 flex justify-between items-center flex-shrink-0"><h2 class="text-2xl font-bold">Mesa ${mesaSelecionada.numero}</h2></header><main class="flex-1 overflow-y-auto bg-gray-900"></main><footer class="flex-shrink-0 bg-gray-800 border-t border-gray-700 grid grid-cols-3 text-center text-gray-400"><button onclick="renderPdvScreen('conta')" class="p-4 relative ${screen === 'conta' ? 'nav-active' : ''}"><i class="fas fa-receipt text-2xl"></i><span class="text-xs block mt-1">Ver Conta</span>${totalItens > 0 ? `<span class="absolute top-2 right-6 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">${totalItens}</span>` : ''}</button><button onclick="renderPdvScreen('adicionar')" class="p-4 ${screen === 'adicionar' ? 'nav-active' : ''}"><i class="fas fa-plus text-2xl"></i><span class="text-xs block mt-1">Adicionar Itens</span></button><button onclick="fecharPdvView()" class="p-4"><i class="fas fa-table-cells text-2xl"></i><span class="text-xs block mt-1">Mesas</span></button></footer></div>`; const main = container.querySelector('main'); if (screen === 'adicionar') { main.innerHTML = `<div class="p-3 border-b border-gray-700 flex-shrink-0 bg-gray-800 sticky top-0 z-10"><div id="categorias-container" class="flex items-center gap-2 overflow-x-auto no-scrollbar"></div></div><div id="produtos-container" class="p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>`; renderCategorias(); renderProdutos(Object.keys(cardapio)[0]); } else { main.innerHTML = `<div class="p-4 flex flex-col h-full"><div class="mb-4"><label for="cliente-nome" class="text-sm text-gray-400">Nome Cliente</label><input type="text" id="cliente-nome" value="${mesaSelecionada.cliente || ''}" class="w-full bg-gray-700 p-2 rounded-lg mt-1 border-0"></div><h3 class="text-xl font-semibold mb-4">Comanda</h3><div id="comanda-itens" class="flex-1 space-y-2 overflow-y-auto no-scrollbar pr-2 mb-4"></div><div class="border-t border-gray-700 pt-4"><div class="flex justify-between items-center text-2xl font-bold mb-4"><span>Total</span><span id="comanda-total">R$ 0,00</span></div><button onclick="enviarPedido()" class="w-full bg-green-600 font-bold py-3 rounded-lg"><i class="fas fa-paper-plane"></i> Salvar & Enviar</button></div></div>`; renderComanda(); } };
+        const renderCategorias = () => { const container = document.getElementById('categorias-container'); container.innerHTML = ''; Object.keys(cardapio).forEach((cat, i) => { const btn = document.createElement('button'); btn.textContent = cat; btn.className = `py-2 px-4 rounded-full font-semibold text-sm whitespace-nowrap ${i === 0 ? 'bg-amber-500 text-white' : 'bg-gray-700'}`; btn.onclick = () => { renderProdutos(cat); container.querySelectorAll('button').forEach(b => b.className = 'py-2 px-4 rounded-full font-semibold text-sm whitespace-nowrap bg-gray-700'); btn.className = 'py-2 px-4 rounded-full font-semibold text-sm whitespace-nowrap bg-amber-500 text-white'; }; container.appendChild(btn); }); };
+        const renderProdutos = (cat) => { const container = document.getElementById('produtos-container'); container.innerHTML = ''; cardapio[cat].forEach(item => { const card = document.createElement('div'); card.className = "bg-gray-700 p-3 rounded-lg cursor-pointer"; card.innerHTML = `<p class="font-semibold">${item.nome}</p><p class="text-lg text-amber-400 font-bold mt-2">${formatCurrency(item.preco)}</p>`; card.onclick = () => abrirDetalhesItem(item); container.appendChild(card); }); };
+        const abrirDetalhesItem = (item) => { const container = document.getElementById('item-details-view'); container.classList.remove('hidden'); container.innerHTML = `<div class="bg-gray-800 w-full max-w-sm rounded-2xl shadow-2xl flex flex-col fade-in"><header class="p-4 border-b border-gray-700"><h3 class="text-xl font-bold">${item.nome}</h3>${item.description ? `<p class="text-sm text-gray-400">${item.description}</p>` : ''}</header><div class="p-4 space-y-4"><div class="flex items-center justify-center gap-4"><button id="d-minus" class="bg-gray-600 w-10 h-10 rounded-full font-bold text-xl">-</button><span id="d-qty" class="font-bold text-2xl w-10 text-center">1</span><button id="d-plus" class="bg-gray-600 w-10 h-10 rounded-full font-bold text-xl">+</button></div><textarea id="d-obs" class="w-full bg-gray-700 p-2 rounded-lg h-20" placeholder="Obs: Sem cebola..."></textarea></div><footer class="p-4 border-t border-gray-700 grid grid-cols-2 gap-3"><button onclick="fecharDetalhesItem()" class="bg-gray-600 font-bold py-2 rounded-lg">Cancelar</button><button id="d-confirm" class="bg-amber-600 font-bold py-2 rounded-lg">Confirmar</button></footer></div>`; let qty = 1; const qtyEl = container.querySelector('#d-qty'); container.querySelector('#d-minus').onclick = () => { if(qty > 1) qtyEl.textContent = --qty; }; container.querySelector('#d-plus').onclick = () => qtyEl.textContent = ++qty; container.querySelector('#d-confirm').onclick = () => { const obs = container.querySelector('#d-obs').value.trim(); const itemExistente = comandaTemporaria.find(i => i.id === item.id && i.observacao === obs); if (itemExistente) { itemExistente.quantidade += qty; } else { comandaTemporaria.push({ ...item, quantidade: qty, observacao: obs }); } showNotification(`${qty}x ${item.nome} adicionado!`); fecharDetalhesItem(); renderPdvScreen('conta'); }; };
         const fecharDetalhesItem = () => document.getElementById('item-details-view').classList.add('hidden');
-        const renderComanda = () => { /* ... (código idêntico ao anterior) ... */ };
-        const changeQty = (i, amount) => { /* ... (código idêntico ao anterior) ... */ };
-        const updateTimers = () => { /* ... (código idêntico ao anterior) ... */ };
-        const abrirRelatoriosView = async () => { /* ... (código idêntico ao anterior) ... */ };
-        const fecharRelatoriosView = () => document.getElementById('relatorios-view').classList.add('hidden');
+        const renderComanda = () => { const container = document.getElementById('comanda-itens'); const totalEl = document.getElementById('comanda-total'); if(!container || !totalEl) return; let total = 0; container.innerHTML = ''; if(comandaTemporaria.length === 0) { container.innerHTML = '<p class="text-center text-gray-500">Nenhum item.</p>'; totalEl.textContent = formatCurrency(0); return; } comandaTemporaria.forEach((item, i) => { total += item.preco * item.quantidade; const itemDiv = document.createElement('div'); itemDiv.className = "flex justify-between items-center bg-gray-700/50 p-2 rounded"; itemDiv.innerHTML = `<div><p>${item.nome}</p>${item.observacao ? `<p class="text-xs text-amber-400">Obs: ${item.observacao}</p>` : ''}</div><div class="flex items-center gap-3"><button onclick="changeQty(${i}, -1)">-</button><span>${item.quantidade}</span><button onclick="changeQty(${i}, 1)">+</button></div>`; container.appendChild(itemDiv); }); totalEl.textContent = formatCurrency(total); };
+        const changeQty = (i, amount) => { if(comandaTemporaria[i]) { comandaTemporaria[i].quantidade += amount; if (comandaTemporaria[i].quantidade <= 0) comandaTemporaria.splice(i, 1); } renderComanda(); };
+        const updateTimers = () => { document.querySelectorAll('[data-timestamp]').forEach(el => { const timestamp = parseInt(el.dataset.timestamp, 10); if (!timestamp) return; const diff = Math.floor(Date.now() / 1000) - timestamp; const minutes = Math.floor(diff / 60); const seconds = diff % 60; el.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`; el.classList.remove('text-green-400', 'text-yellow-400', 'text-red-500'); if (minutes >= 15) el.classList.add('text-red-500'); else if (minutes >= 8) el.classList.add('text-yellow-400'); else el.classList.add('text-green-400'); }); };
+        const abrirRelatoriosView = async () => { /* Lógica de relatórios mantida como antes */ }; const fecharRelatoriosView = () => document.getElementById('relatorios-view').classList.add('hidden');
         const fecharDetalheCaixaView = () => document.getElementById('caixa-detalhe-view').classList.add('hidden');
         const formatCurrency = v => v ? v.toLocaleString('pt-BR', { style: 'currency', 'currency': 'BRL' }) : 'R$ 0,00';
 
-        window.handleLogout = handleLogout; window.abrirGestaoUsuariosView = abrirGestaoUsuariosView; window.toggleUserStatus = toggleUserStatus; window.fecharConta = fecharConta; window.cancelarPedidosMesa = cancelarPedidosMesa; window.marcarPedidoPronto = marcarPedidoPronto; window.marcarPedidoEntregue = marcarPedidoEntregue; window.abrirModalAberturaCaixa=abrirModalAberturaCaixa; window.abrirCaixa=abrirCaixa; window.fecharCaixa=fecharCaixa; window.fecharPdvView=fecharPdvView; window.renderPdvScreen=renderPdvScreen; window.enviarPedido=enviarPedido; window.changeQty=changeQty; window.fecharDetalhesItem=fecharDetalhesItem; window.fecharDetalheCaixaView=fecharDetalheCaixaView; window.handleCriarUsuario = handleCriarUsuario;
-        
-        initFirebase();
-    </script>
-</body>
-</html>
+        // Expondo as funções necessárias globalmente
+        window.handleLogout = handleLogout; window.abrirGestaoUsuariosView = abrirGestaoUsuariosView; window.toggleUserStatus = toggleUserStatus; window.fecharConta = fecharConta; window.cancelarPedidosMesa = cancelarPedidosMesa; window.marcarPedidoPronto = marcarPedidoPronto; window.marcarPedidoEntregue = marcarPedidoEntregue; window.abrirModalAberturaCaixa=abrirModalAberturaCaixa; window.abrirCaixa=abrirCaixa; window.fecharCaixa=fecharCaixa; window.fecharPdvView=fecharPdvView; window.renderPdvScreen=renderPdvScreen; window.enviarPedido=enviarPedido; window.changeQty=changeQty; window.fecharDetalhesItem=fecharDetalhesItem; window.fecharDetalheCaixaView=fecharDetalheCaixaView; window.handle
